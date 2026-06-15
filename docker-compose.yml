@@ -1,0 +1,187 @@
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6381:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # ── APM: Jaeger (OTLP-native, local dev) ──────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.65
+    profiles: ["apm"]
+    ports:
+      - "4317:4317"       # OTLP gRPC
+      - "4318:4318"       # OTLP HTTP
+      - "16686:16686"     # UI
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - METRICS_STORAGE_TYPE=none
+    restart: unless-stopped
+
+  # ── PostHog Self-hosted (product analytics) — TASK-041 ──
+  # Start with: docker compose --profile posthog up -d
+  # Access UI at http://localhost:8010
+  # Simplified setup: ClickHouse-only (no Kafka/Zookeeper for dev)
+  posthog_db:
+    image: postgres:15-alpine
+    profiles: ["posthog"]
+    environment:
+      - POSTGRES_USER=posthog
+      - POSTGRES_PASSWORD=posthog
+      - POSTGRES_DB=posthog
+    volumes:
+      - posthog_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  posthog_clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    profiles: ["posthog"]
+    ulimits:
+      nofile: 262144
+    environment:
+      - CLICKHOUSE_USER=posthog
+      - CLICKHOUSE_PASSWORD=posthog
+    volumes:
+      - posthog_ch_data:/var/lib/clickhouse
+    restart: unless-stopped
+
+  posthog_redis:
+    image: redis:7-alpine
+    profiles: ["posthog"]
+    restart: unless-stopped
+
+  posthog:
+    image: posthog/posthog:latest
+    profiles: ["posthog"]
+    ports:
+      - "8010:8000"
+    environment:
+      - POSTHOG_DB_HOST=posthog_db
+      - POSTHOG_DB_NAME=posthog
+      - POSTHOG_DB_USER=posthog
+      - POSTHOG_DB_PASSWORD=posthog
+      - POSTHOG_REDIS_HOST=posthog_redis
+      - POSTHOG_REDIS_PORT=6379
+      - CLICKHOUSE_HOST=posthog_clickhouse
+      - CLICKHOUSE_USER=posthog
+      - CLICKHOUSE_PASSWORD=posthog
+      - CLICKHOUSE_DATABASE=posthog
+      - CLICKHOUSE_SECURE=false
+      - SECRET_KEY=${POSTHOG_SECRET_KEY:-dev-secret-change-in-prod-at-least-32-chars!!}
+      - IS_BEHIND_PROXY=false
+      - DISABLE_SECURE_SSL_REDIRECT=true
+      - SITE_URL=http://localhost:8010
+      # Disable heavy services not needed for dev
+      - PLUGIN_SERVER_ENABLED=false
+      - KAFKA_ENABLED=false
+    depends_on:
+      - posthog_db
+      - posthog_clickhouse
+      - posthog_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ── Backend API ─────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8086:8086"
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/pitch_forge
+      - MONGODB_DB_NAME=pitch_forge
+      - REDIS_URL=redis://redis:6379
+      - PITCHFORGE_HOME=/app
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - SENTRY_RELEASE=${SENTRY_RELEASE:-}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - OTEL_SERVICE_NAME=pitchforge-api
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - .:/app
+      - generated_data:/app/generated
+      - planning_data:/app/planning_outputs
+    restart: unless-stopped
+
+  # ── MCP Server (Model Context Protocol) — TASK-055 ──────
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "8087:8087"
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/pitch_forge
+      - MONGODB_DB_NAME=pitch_forge
+      - REDIS_URL=redis://redis:6379
+      - PITCHFORGE_HOME=/app
+      - MCP_API_KEY=${MCP_API_KEY:-dev-mcp-key}
+    depends_on:
+      - mongodb
+      - redis
+      - api
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python -m app.worker
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017/pitch_forge
+      - MONGODB_DB_NAME=pitch_forge
+      - REDIS_URL=redis://redis:6379
+      - PITCHFORGE_HOME=/app
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - SENTRY_RELEASE=${SENTRY_RELEASE:-}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - OTEL_SERVICE_NAME=pitchforge-worker
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - .:/app
+      - generated_data:/app/generated
+      - planning_data:/app/planning_outputs
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  redis_data:
+  generated_data:
+  planning_data:
+  posthog_db_data:
+  posthog_ch_data:

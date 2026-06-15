@@ -1,0 +1,51 @@
+{
+  "description": "SkillOpt score schema — defines the composite score for evaluating codegen output quality",
+  "version": "1.0.0",
+  "dimensions": {
+    "compiles": {
+      "weight": 0.30,
+      "description": "All generated Python files are syntactically valid",
+      "scale": [0.0, 1.0],
+      "method": "ast.parse on all .py files, ratio of valid/total"
+    },
+    "imports_valid": {
+      "weight": 0.15,
+      "description": "All import statements resolve to existing modules",
+      "scale": [0.0, 1.0],
+      "method": "AST inspection of Import/ImportFrom nodes, heuristic validation"
+    },
+    "tests_pass": {
+      "weight": 0.20,
+      "description": "Generated test files contain well-structured test functions",
+      "scale": [0.0, 1.0],
+      "method": "Count test_ prefixed functions in test files, ratio of valid/total"
+    },
+    "endpoints_match": {
+      "weight": 0.15,
+      "description": "Generated API endpoints match expected endpoints list",
+      "scale": [0.0, 1.0],
+      "method": "Jaccard similarity between found and expected endpoint sets"
+    },
+    "models_match": {
+      "weight": 0.10,
+      "description": "Generated data models match expected model names",
+      "scale": [0.0, 1.0],
+      "method": "Fuzzy match of class names in model/schema files vs expectations"
+    },
+    "no_orphan_code": {
+      "weight": 0.05,
+      "description": "No orphaned imports, empty functions, or incomplete code",
+      "scale": [0.0, 1.0],
+      "method": "Count pass-only functions, TODO comments, unused symbols"
+    },
+    "lint_clean": {
+      "weight": 0.05,
+      "description": "Common lint issues (trailing whitespace, long lines, bare except)",
+      "scale": [0.0, 1.0],
+      "method": "Regex checks for common patterns — trailing whitespace, >120 chars, mixed tabs/spaces, bare except"
+    }
+  },
+  "total_formula": "sum(dimension.score * dimension.weight for all dimensions)",
+  "acceptance_threshold": 0.70,
+  "target_improvement": 0.10
+}

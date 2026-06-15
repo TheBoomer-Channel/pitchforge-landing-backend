@@ -1,0 +1,21 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system deps (git for GitHub sources in research)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy app
+COPY . .
+
+EXPOSE 8087
+
+# Default: run MCP server over SSE for HTTP clients
+CMD ["python", "-m", "mcp_server.server", "--transport", "sse", "--port", "8087"]

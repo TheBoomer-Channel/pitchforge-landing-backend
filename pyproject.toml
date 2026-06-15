@@ -1,0 +1,30 @@
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = [
+    "--cov=app",
+    "--cov-report=term",
+    "--cov-report=lcov",
+    "--cov-report=json",
+    "--cov-fail-under=80",
+    "-v",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [
+    "app/tests/*",
+    "app/test_*",
+    "*/migrations/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]

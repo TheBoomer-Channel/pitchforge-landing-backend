@@ -1,0 +1,39 @@
+name: Coolify Deploy Trigger
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'migrations/**'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          python -m pytest tests/ -v --tb=short
+        env:
+          # Tests run without real APIs — fixtures provide mock data
+          PYTHONPATH: .
+
+  # Coolify auto-detects pushes to the connected repo.
+  # No manual deploy step needed — Coolify watches the branch.
+  # This job just validates the code before Coolify picks it up.
