@@ -117,6 +117,10 @@ services:
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_SERVICE_NAME=pitchforge-api
+      - LISTMONK_URL=${LISTMONK_URL:-https://newsletter.transcend.cargoffer.com}
+      - LISTMONK_API_USER=${LISTMONK_API_USER:-Hermes}
+      - LISTMONK_API_TOKEN=${LISTMONK_API_TOKEN:-sWQSkEmQsZr6ezAro0YDAHXYMHiHSeM1}
+      - LISTMONK_LIST_ID=${LISTMONK_LIST_ID:-1}
     depends_on:
       mongodb:
         condition: service_started

@@ -5,6 +5,7 @@ Supports HTTP Basic Auth with API user credentials.
 """
 
 import logging
+import os
 from typing import Optional
 
 import httpx
@@ -12,11 +13,12 @@ import httpx
 logger = logging.getLogger(__name__)
 
 # ── ListMonk Configuration ─────────────────────────────
+# Credentials loaded from environment variables (set in Coolify / .env)
 
-LISTMONK_URL = "https://newsletter.transcend.cargoffer.com"
-LISTMONK_API_USER = "Hermes"  # Set via environment or passed at runtime
-LISTMONK_API_TOKEN = "sWQSkEmQsZr6ezAro0YDAHXYMHiHSeM1"
-LISTMONK_LIST_ID = 1  # Default list ID, can be changed
+LISTMONK_URL = os.getenv("LISTMONK_URL", "https://newsletter.transcend.cargoffer.com")
+LISTMONK_API_USER = os.getenv("LISTMONK_API_USER", "Hermes")
+LISTMONK_API_TOKEN = os.getenv("LISTMONK_API_TOKEN", "sWQSkEmQsZr6ezAro0YDAHXYMHiHSeM1")
+LISTMONK_LIST_ID = int(os.getenv("LISTMONK_LIST_ID", "1"))
 
 
 async def subscribe(email: str, name: str = "", api_user: str = "", api_token: str = "", list_id: int = 0) -> dict:

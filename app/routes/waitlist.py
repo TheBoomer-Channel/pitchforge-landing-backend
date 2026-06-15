@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from ..services.waitlist import subscribe
+from ..services.waitlist import subscribe, LISTMONK_URL
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/waitlist", tags=["waitlist"])
@@ -53,4 +53,4 @@ async def api_subscribe(req: SubscribeRequest):
 @router.get("/health")
 async def api_health():
     """Check waitlist service health."""
-    return {"status": "ok", "service": "listmonk", "url": "https://newsletter.transcend.cargoffer.com"}
+    return {"status": "ok", "service": "listmonk", "url": LISTMONK_URL}
