@@ -50,7 +50,7 @@
 
 Make sure `ALLOWED_ORIGINS` includes:
 ```
-https://pitchforge.ai
+https://pitch-forge.com
 https://*.pages.dev
 ```
 

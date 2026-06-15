@@ -472,7 +472,7 @@ class LLMRouter:
 
         # OpenRouter needs additional headers
         if "openrouter" in config.base_url:
-            headers["Referer"] = "https://pitchforge.ai"
+            headers["Referer"] = "https://pitch-forge.com"
             headers["X-Title"] = "PitchForge"
 
         response = await client.post(
