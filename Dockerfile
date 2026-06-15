@@ -56,11 +56,11 @@ RUN chmod -R a+rX /opt/venv
 USER app
 
 # Expose port
-EXPOSE 8086
+EXPOSE 3000
 
 # Healthcheck — use python from venv
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')" || exit 1
 
 # Production CMD — no --reload. Use python -m uvicorn for reliable venv resolution
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8086"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3000"]
