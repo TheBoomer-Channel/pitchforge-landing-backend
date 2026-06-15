@@ -112,16 +112,17 @@ services:
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
       - SENTRY_DSN=${SENTRY_DSN}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_RELEASE=${SENTRY_RELEASE:-}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_SERVICE_NAME=pitchforge-api
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
     volumes:
-      - .:/app
       - generated_data:/app/generated
       - planning_data:/app/planning_outputs
     restart: unless-stopped
@@ -142,11 +143,12 @@ services:
       - PITCHFORGE_HOME=/app
       - MCP_API_KEY=${MCP_API_KEY:-dev-mcp-key}
     depends_on:
-      - mongodb
-      - redis
-      - api
-    volumes:
-      - .:/app
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
+      api:
+        condition: service_started
     restart: unless-stopped
 
   worker:
@@ -164,16 +166,17 @@ services:
       - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
       - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
       - SENTRY_DSN=${SENTRY_DSN}
-      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-development}
+      - SENTRY_ENVIRONMENT=${SENTRY_ENVIRONMENT:-production}
       - SENTRY_RELEASE=${SENTRY_RELEASE:-}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       - OTEL_SERVICE_NAME=pitchforge-worker
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_started
+      redis:
+        condition: service_started
     volumes:
-      - .:/app
       - generated_data:/app/generated
       - planning_data:/app/planning_outputs
     restart: unless-stopped
