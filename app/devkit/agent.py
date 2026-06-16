@@ -5,14 +5,13 @@ The agent provides structure and reporting; implementation happens via the Herme
 When connected to GitHub, each completed task auto-commits and pushes.
 """
 
-import json
 import logging
-import os
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from .briefing import BriefingEngine
+from .models import Lesson
 from .vault import ProjectVault
 from .tasks import TaskManager, Task
 from .testcycle import TestCycle
@@ -28,7 +27,47 @@ class DevAgent:
         self.vault = ProjectVault(project_dir)
         self.tasks = TaskManager(project_dir)
         self.testcycle = TestCycle(project_dir)
+        self.briefer = BriefingEngine()
         self.cycle_count = 0
+
+    def load_lessons_from_vault(self) -> None:
+        """Load lessons from vault learnings.md into the briefer."""
+        content = self.vault.read("learnings.md")
+        if not content:
+            return
+        lessons = []
+        current = {}
+        for line in content.split("\n"):
+            line = line.strip()
+            if line.startswith("### "):
+                if current.get("title"):
+                    lessons.append(Lesson(
+                        id=f"lesson-{len(lessons)+1}",
+                        category="runtime_error",
+                        error_type="unknown",
+                        message=current.get("body", ""),
+                        rule_suggestion=current.get("body", ""),
+                        project="startup-factory",
+                    ))
+                current = {"title": line[4:].split("(")[0].strip()}
+            elif line and current:
+                current["body"] = current.get("body", "") + line + "\n"
+        if current.get("title"):
+            lessons.append(Lesson(
+                id=f"lesson-{len(lessons)+1}",
+                category="runtime_error",
+                error_type="unknown",
+                message=current.get("body", ""),
+                rule_suggestion=current.get("body", ""),
+                project="startup-factory",
+            ))
+        self.briefer.load_lessons(lessons)
+
+    def get_briefing(self) -> dict:
+        """Get a session briefing with patterns and tips."""
+        self.load_lessons_from_vault()
+        briefing = self.briefer.generate()
+        return briefing.model_dump(mode="json")
 
     async def _auto_commit(self, message: str, task_id: Optional[str] = None) -> None:
         """Auto-commit and push to GitHub if a remote is configured."""
@@ -54,6 +93,7 @@ class DevAgent:
     def setup(self, planning_json: Optional[str] = None) -> dict:
         """Initialize project structure: vault + tasks from planning."""
         logger.info(f"Setting up dev environment for {self.project_dir}")
+        self.load_lessons_from_vault()
 
         # 1. Init vault
         vault_files = self.vault.init()
@@ -112,6 +152,7 @@ class DevAgent:
                 "criteria_count": len(next_task.criteria),
             }
 
+        briefing = self.get_briefing()
         return {
             "project": str(self.project_dir),
             "timestamp": datetime.utcnow().isoformat(),
@@ -120,6 +161,7 @@ class DevAgent:
             "next_task": next_info,
             "docker_available": docker_ok,
             "vault": vault_files,
+            "briefing": briefing,
         }
 
     def start_task(self, task_id: str) -> Optional[Task]:
@@ -227,15 +269,15 @@ class DevAgent:
         stats = self.tasks.get_stats()
 
         lines = [
-            f"# Development Plan",
-            f"",
+            "# Development Plan",
+            "",
             f"**Status**: {stats['completed']}/{stats['total']} tasks completed",
             f"**In Progress**: {stats['in_progress']}",
             f"**Pending**: {stats['pending']}",
             f"**Blocked**: {stats['blocked']}",
-            f"",
-            f"## Tasks",
-            f"",
+            "",
+            "## Tasks",
+            "",
         ]
 
         for t in tasks:
