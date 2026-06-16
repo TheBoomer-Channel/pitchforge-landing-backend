@@ -13,8 +13,8 @@ clerk-backend-api>=5.0.0
 bcrypt>=4.0.0
 
 # Database — MongoDB + Beanie
-motor>=3.6.0,<3.7.0
-beanie>=1.30.0
+motor>=3.7.0
+beanie>=2.0.0
 
 # Stripe
 stripe>=9.0.0
@@ -31,11 +31,11 @@ slowapi>=0.1.0
 sentry-sdk[fastapi]>=2.20.0
 
 # OpenTelemetry / APM (TASK-024)
-opentelemetry-distro[otlp]>=0.53b0
-opentelemetry-instrumentation-fastapi>=0.53b0
-opentelemetry-instrumentation-httpx>=0.53b0
-opentelemetry-instrumentation-pymongo>=0.53b0
-opentelemetry-instrumentation-logging>=0.53b0
+opentelemetry-distro[otlp]>=0.25b0
+opentelemetry-instrumentation-fastapi>=0.25b0
+opentelemetry-instrumentation-httpx>=0.25b0
+opentelemetry-instrumentation-pymongo>=0.25b0
+opentelemetry-instrumentation-logging>=0.25b0
 
 # Structured logging
 loguru>=0.7.0

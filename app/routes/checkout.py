@@ -17,6 +17,8 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
+from beanie.operators import In
+
 from ..auth import get_current_user, TIER_ORDER
 from ..config import settings
 from ..database import User, Payment, Subscription, ProcessedWebhookEvent
@@ -442,7 +444,7 @@ async def _handle_subscription_ended(data: dict) -> None:
             other_active = await Subscription.find_one(
                 Subscription.user_id == user.clerk_user_id,
                 Subscription.stripe_subscription_id != sub_id,
-                Subscription.status.in_(["active", "trialing"]),
+                In(Subscription.status, ["active", "trialing"]),
             )
             if not other_active and user.tier != "free":
                 logger.warning(

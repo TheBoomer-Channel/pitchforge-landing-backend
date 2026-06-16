@@ -23,6 +23,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from beanie.operators import In
+
 from ..auth import get_current_user
 from ..database import User
 from ..models.usage import MonthlyUsage, METRICS
@@ -184,7 +186,7 @@ async def push_to_stripe(request: Request) -> dict:
 
     # Find all users with active subscriptions and monthly usage
     subs = await Subscription.find(
-        Subscription.status.in_(["active", "trialing"]),
+        In(Subscription.status, ["active", "trialing"]),
     ).to_list()
 
     for sub in subs:

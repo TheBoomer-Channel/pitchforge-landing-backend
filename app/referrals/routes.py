@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from beanie.operators import In
+
 from ..auth import get_current_user
 from ..database import User, Subscription
 from .models import Referral
@@ -262,7 +264,7 @@ async def cron_rewards(request: Request) -> dict:
         try:
             sub = await Subscription.find_one(
                 Subscription.user_id == referrer_id,
-                Subscription.status.in_(["active", "trialing"]),
+                In(Subscription.status, ["active", "trialing"]),
             )
             if sub:
                 from ..config import settings

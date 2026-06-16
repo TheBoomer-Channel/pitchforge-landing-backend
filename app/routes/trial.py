@@ -25,6 +25,8 @@ from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from beanie.operators import In
+
 from ..auth import get_current_user
 from ..database import User, Subscription
 from ..models.audit import AuditAction
@@ -102,7 +104,7 @@ async def get_status(user: User = Depends(get_current_user)) -> TrialStatusRespo
     has_sub = False
     sub = await Subscription.find_one(
         Subscription.user_id == user.clerk_user_id,
-        Subscription.status.in_(["active", "trialing"]),
+        In(Subscription.status, ["active", "trialing"]),
     )
     has_sub = sub is not None
 
@@ -147,7 +149,7 @@ async def start_trial(
     # Don't start a trial if the user has an active paid subscription
     sub = await Subscription.find_one(
         Subscription.user_id == user.clerk_user_id,
-        Subscription.status.in_(["active", "trialing"]),
+        In(Subscription.status, ["active", "trialing"]),
     )
     if sub:
         raise HTTPException(
@@ -257,7 +259,7 @@ async def cron_daily(request: Request) -> dict:
         # Check they don't have an active subscription
         sub = await Subscription.find_one(
             Subscription.user_id == user.clerk_user_id,
-            Subscription.status.in_(["active", "trialing"]),
+            In(Subscription.status, ["active", "trialing"]),
         )
         if sub:
             continue
@@ -361,7 +363,7 @@ async def cron_daily(request: Request) -> dict:
         # Check for active subscription
         sub = await Subscription.find_one(
             Subscription.user_id == user.clerk_user_id,
-            Subscription.status.in_(["active", "trialing"]),
+            In(Subscription.status, ["active", "trialing"]),
         )
         if sub:
             continue
