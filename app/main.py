@@ -290,8 +290,7 @@ PUBLIC_PATH_PREFIXES = {
     "/dashboard",  # Static files
     "/api/download",  # Asset download (public for preview)
     "/api/files",     # Asset file listing (public for preview)
-    "/api/v1/marketplace/templates/",  # Marketplace public detail/preview
-    "/api/v1/marketplace/templates",    # Marketplace public browse (exact)
+    "/api/v1/marketplace/templates",    # Marketplace public browse + detail/preview (no trailing slash — prefix matching uses startswith)
     "/api/v1/marketplace/landing-data",  # Public landing preview data
     "/api/v1/ab-prompts/assign",  # Public variant assignment (runtime)
     "/api/v1/ab-prompts/log",  # Public execution logging (runtime)
