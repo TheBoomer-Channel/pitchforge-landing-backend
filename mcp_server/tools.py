@@ -28,10 +28,14 @@ INTERNAL_API_KEY = os.getenv("MCP_API_KEY", "")
 
 
 async def _api_post(path: str, payload: dict) -> dict:
-    """Make an internal API request to the PitchForge backend."""
+    """Make an internal API request to the PitchForge backend.
+
+    Uses X-API-Key header matching the API's auth middleware pattern.
+    The API middleware checks X-API-Key first, then Authorization: Bearer sf_...
+    """
     headers = {"Content-Type": "application/json"}
     if INTERNAL_API_KEY:
-        headers["Authorization"] = f"Bearer {INTERNAL_API_KEY}"
+        headers["X-API-Key"] = INTERNAL_API_KEY
 
     async with httpx.AsyncClient(
         base_url=API_BASE_URL,
@@ -45,10 +49,13 @@ async def _api_post(path: str, payload: dict) -> dict:
 
 
 async def _api_get(path: str) -> dict:
-    """Make an internal GET request to the PitchForge backend."""
+    """Make an internal GET request to the PitchForge backend.
+
+    Uses X-API-Key header matching the API's auth middleware pattern.
+    """
     headers = {}
     if INTERNAL_API_KEY:
-        headers["Authorization"] = f"Bearer {INTERNAL_API_KEY}"
+        headers["X-API-Key"] = INTERNAL_API_KEY
 
     async with httpx.AsyncClient(
         base_url=API_BASE_URL,

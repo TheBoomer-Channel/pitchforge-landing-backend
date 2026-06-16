@@ -194,11 +194,37 @@ def main():
     if args.transport == "sse":
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
+        from starlette.middleware.base import BaseHTTPMiddleware
+        from starlette.responses import JSONResponse
         from starlette.routing import Mount, Route
 
         sse = SseServerTransport("/mcp/messages")
 
+        # ── Auth middleware for SSE transport ──────────
+        class MCPAuthMiddleware(BaseHTTPMiddleware):
+            """Validates Bearer token on all requests except /health."""
+            async def dispatch(self, request, call_next):
+                if request.url.path == "/health":
+                    return await call_next(request)
+
+                auth_header = request.headers.get("Authorization", "")
+                if auth_header.startswith("Bearer "):
+                    token = auth_header[7:]
+                    if auth.verify_token(token):
+                        return await call_next(request)
+
+                # Check if auth is configured at all
+                if not auth.get_mcp_api_key():
+                    # Dev mode: no auth required
+                    return await call_next(request)
+
+                return JSONResponse(
+                    status_code=401,
+                    content={"error": "Unauthorized", "message": "Valid MCP_API_KEY required"},
+                )
+
         async def handle_sse(request):
+            # Use the official MCP SDK pattern for SSE transport
             async with sse.connect_sse(
                 request.scope,
                 request.receive,
@@ -218,6 +244,7 @@ def main():
                 Route("/health", endpoint=lambda r: {"status": "ok"}),
             ],
         )
+        starlette_app.add_middleware(MCPAuthMiddleware)
 
         import uvicorn
         logger.info(f"PitchForge MCP Server starting on {args.host}:{args.port} (SSE)")
