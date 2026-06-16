@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 LISTMONK_URL = os.getenv("LISTMONK_URL", "https://newsletter.transcend.cargoffer.com")
 LISTMONK_API_USER = os.getenv("LISTMONK_API_USER", "Hermes")
 LISTMONK_API_TOKEN = os.getenv("LISTMONK_API_TOKEN", "sWQSkEmQsZr6ezAro0YDAHXYMHiHSeM1")
-LISTMONK_LIST_ID = int(os.getenv("LISTMONK_LIST_ID", "1"))
+LISTMONK_LIST_ID = int(os.getenv("LISTMONK_LIST_ID", "3"))  # Pitch-Forge list
 
 
 async def subscribe(email: str, name: str = "", api_user: str = "", api_token: str = "", list_id: int = 0) -> dict:
