@@ -122,10 +122,10 @@ class TestGenerators:
         assert "pitch_deck" in result
         assert "pricing" in result
         
-        # Verify files were written
+        # Verify files were written (TASK-063 saves in assets/ subdirectory)
         for name in ("landing", "pitch_deck", "pricing"):
-            path = Path(tmp_path) / f"{name}.html"
-            assert path.exists()
+            path = Path(tmp_path) / "assets" / f"{name}.html"
+            assert path.exists(), f"Missing file: {path}"
             assert path.read_text().startswith("<!DOCTYPE html>")
 
 

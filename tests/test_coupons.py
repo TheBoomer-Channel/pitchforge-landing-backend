@@ -10,44 +10,49 @@ from datetime import datetime, timedelta, timezone
 from app.models.coupon import Coupon, Redemption
 
 
-def test_coupon_is_valid_active():
+@pytest.mark.asyncio
+async def test_coupon_is_valid_active():
     """A fresh coupon with no limits should be valid."""
     c = Coupon(code="TEST10", kind="percent", value=10, is_active=True)
-    valid, reason = c.is_valid()
+    valid, reason = await c.is_valid()
     assert valid is True
     assert reason == ""
 
 
-def test_coupon_is_valid_disabled():
+@pytest.mark.asyncio
+async def test_coupon_is_valid_disabled():
     """A disabled coupon should be invalid."""
     c = Coupon(code="DISABLED", kind="percent", value=10, is_active=False)
-    valid, reason = c.is_valid()
+    valid, reason = await c.is_valid()
     assert valid is False
     assert "disabled" in reason.lower()
 
 
-def test_coupon_is_valid_max_uses_exhausted():
+@pytest.mark.asyncio
+async def test_coupon_is_valid_max_uses_exhausted():
     """A coupon that has reached max_uses should be invalid."""
     c = Coupon(code="LIMITED", kind="percent", value=10, max_uses=5, used_count=5, is_active=True)
-    valid, reason = c.is_valid()
+    valid, reason = await c.is_valid()
     assert valid is False
     assert "limit" in reason.lower()
 
 
-def test_coupon_is_valid_not_yet_valid():
+@pytest.mark.asyncio
+async def test_coupon_is_valid_not_yet_valid():
     """A coupon with future valid_from should be invalid."""
     future = datetime.now(timezone.utc) + timedelta(hours=24)
     c = Coupon(code="FUTURE", kind="percent", value=10, valid_from=future, is_active=True)
-    valid, reason = c.is_valid()
+    valid, reason = await c.is_valid()
     assert valid is False
     assert "not yet valid" in reason.lower()
 
 
-def test_coupon_is_valid_expired():
+@pytest.mark.asyncio
+async def test_coupon_is_valid_expired():
     """An expired coupon should be invalid."""
     past = datetime.now(timezone.utc) - timedelta(hours=1)
     c = Coupon(code="EXPIRED", kind="percent", value=10, valid_until=past, is_active=True)
-    valid, reason = c.is_valid()
+    valid, reason = await c.is_valid()
     assert valid is False
     assert "expired" in reason.lower()
 

@@ -39,6 +39,7 @@ def client(app):
     return TestClient(app)
 
 
+@pytest.mark.mongodb
 def test_usage_status_returns_metrics(client):
     r = client.get("/api/v1/usage/status")
     assert r.status_code == 200
@@ -56,6 +57,7 @@ def test_usage_limits_returns_caps(client):
     assert r.status_code == 200
 
 
+@pytest.mark.mongodb
 def test_usage_history_empty(client):
     r = client.get("/api/v1/usage/history")
     assert r.status_code == 200
@@ -74,9 +76,10 @@ def test_push_to_stripe_requires_secret(client):
     assert r.status_code == 401
 
 
-def test_tracker_get_by_tier_free():
+@pytest.mark.asyncio
+async def test_tracker_get_by_tier_free():
     from app.services.usage_tracker import tracker
-    caps = tracker.get_by_tier("free")
+    caps = await tracker.get_by_tier("free")
     assert len(caps) == 5
 
 

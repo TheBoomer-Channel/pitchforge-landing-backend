@@ -5,9 +5,11 @@ has a full planning spec to work with.
 Also provides MongoDB test fixtures using mongomock.
 """
 
+import logging
 import pytest
 from datetime import datetime
 
+logger = logging.getLogger(__name__)
 
 # ── MongoDB test fixtures ──────────────────────────────
 #
@@ -16,11 +18,63 @@ from datetime import datetime
 #   docker run -d --name test-mongo -p 27017:27017 mongo:7
 #   MONGODB_URL=mongodb://localhost:27017/test_pitch_forge pytest code/backend/tests/
 
+# ── Beanie mock (prevents CollectionWasNotInitialized) ─
+# Patch applied at module level so it's active before any test imports models.
+
+try:
+    from unittest.mock import AsyncMock, MagicMock
+    from beanie import Document
+
+    # 1. Set mock document settings so get_settings() doesn't raise
+    #    CollectionWasNotInitialized (raised when _document_settings is None).
+    #    This must happen before any Document subclass is instantiated.
+    mock_settings = MagicMock()
+    mock_settings.name = "mock_collection"
+    mock_settings.union_settings = MagicMock()
+    mock_settings.union_settings.name = "mock_union"
+    Document._document_settings = mock_settings
+
+    # 2. Mock get_motor_collection for basic CRUD stubs
+    def _mock_get_collection(self):
+        coll = MagicMock()
+        coll.find_one = AsyncMock(return_value=None)
+        fmock = MagicMock()
+        async def _mock_to_list():
+            return []
+        fmock.to_list = _mock_to_list
+        fmock.sort = MagicMock(return_value=fmock)
+        fmock.limit = MagicMock(return_value=fmock)
+        fmock.skip = MagicMock(return_value=fmock)
+        fmock.project = MagicMock(return_value=fmock)
+        fmock.upsert = AsyncMock(return_value=None)
+        coll.find = MagicMock(return_value=fmock)
+        coll.insert_one = AsyncMock(return_value=MagicMock(inserted_id="mock_id"))
+        coll.insert = AsyncMock(return_value=MagicMock(inserted_ids=["mock_id"]))
+        coll.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
+        coll.delete_one = AsyncMock(return_value=MagicMock(deleted_count=1))
+        return coll
+
+    Document.get_motor_collection = _mock_get_collection
+    logger.info("Patched Beanie Document (settings + collection) for tests")
+except Exception as e:
+    logger.warning(f"Could not patch Beanie: {e}")
+
+
 @pytest.fixture(scope="session")
 def mongodb_url() -> str:
     """URL para conectar a MongoDB de test (requiere contenedor)."""
     import os
     return os.getenv("MONGODB_URL", "mongodb://localhost:27017/test_pitch_forge")
+
+
+@pytest.fixture(autouse=True)
+def _skip_if_no_mongodb(request):
+    """Skip tests marked with @pytest.mark.mongodb when MongoDB is not available."""
+    import os
+    if os.getenv("MONGODB_URL"):
+        return
+    for marker in request.node.iter_markers(name="mongodb"):
+        pytest.skip("MongoDB not available (set MONGODB_URL env var)")
 
 
 @pytest.fixture
