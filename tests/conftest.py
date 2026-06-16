@@ -6,6 +6,7 @@ Also provides MongoDB test fixtures using mongomock.
 """
 
 import logging
+import os as _os
 import pytest
 from datetime import datetime
 
@@ -13,19 +14,25 @@ logger = logging.getLogger(__name__)
 
 # ── MongoDB test fixtures ──────────────────────────────
 #
-# Nota: Los tests de integración con MongoDB requieren un contenedor Docker.
+# Nota: Los tests de integracion con MongoDB requieren un contenedor Docker.
 # Para ejecutarlos localmente:
 #   docker run -d --name test-mongo -p 27017:27017 mongo:7
 #   MONGODB_URL=mongodb://localhost:27017/test_pitch_forge pytest code/backend/tests/
 
+_MONGODB_AVAILABLE = bool(_os.getenv("MONGODB_URL"))
+
 # ── Beanie mock (prevents CollectionWasNotInitialized) ─
 # Always applied at module level. Tests use mock stubs for all Beanie operations.
-# Real MongoDB init via init_beanie() is NOT used in tests because TestClient
-# creates its own anyio event loop, causing "Cannot use AsyncMongoClient in
-# different event loop" errors.
+# Real MongoDB init via init_beanie() is NOT used in tests because:
+#   1. TestClient creates its own anyio event loop (via BlockingPortal), which
+#      conflicts with motor's client binding ("Cannot use AsyncMongoClient in
+#      different event loop").
+#   2. Even with httpx.AsyncClient + ASGITransport on async tests, pytest-asyncio
+#      Mode.AUTO creates separate event loops per test, making session-scoped
+#      Beanie init unusable. Switching to Mode.STRICT breaks 200+ other tests.
 #
-# For integration tests that need real MongoDB, use a separate test suite
-# (e.g., tests/integration/) that runs against a live server.
+# For route/integration tests that need real MongoDB, use httpx.AsyncClient
+# against a LIVE running server (e.g., tests/integration/).
 
 try:
     from unittest.mock import AsyncMock, MagicMock
@@ -67,28 +74,21 @@ except Exception as e:
 
 @pytest.fixture(autouse=True)
 def _skip_if_no_mongodb(request):
-    """Skip tests marked with @pytest.mark.mongodb when MongoDB is not available.
+    """Skip tests marked with @pytest.mark.mongodb.
 
-    Note: These route tests use TestClient which creates its own anyio event loop
-    via BlockingPortal. This conflicts with Beanie's motor client which binds to
-    the event loop it was created on ("Cannot use AsyncMongoClient in different
-    event loop"). The module-level mock provides stubs for model tests but can't
-    handle ExpressionField descriptors needed by route handlers.
+    Route tests (mongodb-marked) are skipped when MongoDB IS available too,
+    because Beanie's motor client binds to its creation event loop, which
+    conflicts with both TestClient's anyio portal and pytest-asyncio's
+    per-test event loops in Mode.AUTO.
 
-    These tests should be converted to proper integration tests that hit a
-    live server (using httpx.AsyncClient) instead of using TestClient.
+    These tests should be converted to integration tests that hit a live
+    server using httpx.AsyncClient from OUTSIDE the test process.
     """
-    import os
-    if not os.getenv("MONGODB_URL"):
-        for marker in request.node.iter_markers(name="mongodb"):
-            pytest.skip("MongoDB not available (set MONGODB_URL env var)")
-            return
-    # MongoDB IS available but route tests can't use real DB via TestClient.
-    # Skip them — use integration tests against a live server instead.
     for marker in request.node.iter_markers(name="mongodb"):
         pytest.skip(
-            "Route test skipped: TestClient event loop conflicts with Beanie. "
-            "Use httpx.AsyncClient against a live server for integration tests."
+            "Route/integration test skipped: Beanie motor client event-loop "
+            "binding conflicts with TestClient portal and pytest-asyncio loops. "
+            "Use integration tests against a live server instead."
         )
         return
 
