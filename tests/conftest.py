@@ -19,45 +19,57 @@ logger = logging.getLogger(__name__)
 #   MONGODB_URL=mongodb://localhost:27017/test_pitch_forge pytest code/backend/tests/
 
 # ── Beanie mock (prevents CollectionWasNotInitialized) ─
-# Patch applied at module level so it's active before any test imports models.
+# Only applied when MongoDB is NOT available OR Beanie < 2.0 is installed.
+# (Docker runs Beanie 1.30 which can't do real init for tests)
+
+import os as _os
+_MONGODB_AVAILABLE = bool(_os.getenv("MONGODB_URL"))
 
 try:
-    from unittest.mock import AsyncMock, MagicMock
-    from beanie import Document
+    import beanie as _beanie
+    _BEANIE_V2 = tuple(int(x) for x in _beanie.__version__.split(".")[:2]) >= (2, 0)
+except Exception:
+    _BEANIE_V2 = False
 
-    # 1. Set mock document settings so get_settings() doesn't raise
-    #    CollectionWasNotInitialized (raised when _document_settings is None).
-    #    This must happen before any Document subclass is instantiated.
-    mock_settings = MagicMock()
-    mock_settings.name = "mock_collection"
-    mock_settings.union_settings = MagicMock()
-    mock_settings.union_settings.name = "mock_union"
-    Document._document_settings = mock_settings
+_NEED_MOCK = not _MONGODB_AVAILABLE or not _BEANIE_V2
 
-    # 2. Mock get_motor_collection for basic CRUD stubs
-    def _mock_get_collection(self):
-        coll = MagicMock()
-        coll.find_one = AsyncMock(return_value=None)
-        fmock = MagicMock()
-        async def _mock_to_list():
-            return []
-        fmock.to_list = _mock_to_list
-        fmock.sort = MagicMock(return_value=fmock)
-        fmock.limit = MagicMock(return_value=fmock)
-        fmock.skip = MagicMock(return_value=fmock)
-        fmock.project = MagicMock(return_value=fmock)
-        fmock.upsert = AsyncMock(return_value=None)
-        coll.find = MagicMock(return_value=fmock)
-        coll.insert_one = AsyncMock(return_value=MagicMock(inserted_id="mock_id"))
-        coll.insert = AsyncMock(return_value=MagicMock(inserted_ids=["mock_id"]))
-        coll.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
-        coll.delete_one = AsyncMock(return_value=MagicMock(deleted_count=1))
-        return coll
+if _NEED_MOCK:
+    try:
+        from unittest.mock import AsyncMock, MagicMock
+        from beanie import Document
 
-    Document.get_motor_collection = _mock_get_collection
-    logger.info("Patched Beanie Document (settings + collection) for tests")
-except Exception as e:
-    logger.warning(f"Could not patch Beanie: {e}")
+        # 1. Set mock document settings so get_settings() doesn't raise
+        #    CollectionWasNotInitialized (raised when _document_settings is None).
+        mock_settings = MagicMock()
+        mock_settings.name = "mock_collection"
+        mock_settings.union_settings = MagicMock()
+        mock_settings.union_settings.name = "mock_union"
+        Document._document_settings = mock_settings
+
+        # 2. Mock get_motor_collection for basic CRUD stubs
+        def _mock_get_collection(self):
+            coll = MagicMock()
+            coll.find_one = AsyncMock(return_value=None)
+            fmock = MagicMock()
+            async def _mock_to_list():
+                return []
+            fmock.to_list = _mock_to_list
+            fmock.sort = MagicMock(return_value=fmock)
+            fmock.limit = MagicMock(return_value=fmock)
+            fmock.skip = MagicMock(return_value=fmock)
+            fmock.project = MagicMock(return_value=fmock)
+            fmock.upsert = AsyncMock(return_value=None)
+            coll.find = MagicMock(return_value=fmock)
+            coll.insert_one = AsyncMock(return_value=MagicMock(inserted_id="mock_id"))
+            coll.insert = AsyncMock(return_value=MagicMock(inserted_ids=["mock_id"]))
+            coll.update_one = AsyncMock(return_value=MagicMock(modified_count=1))
+            coll.delete_one = AsyncMock(return_value=MagicMock(deleted_count=1))
+            return coll
+
+        Document.get_motor_collection = _mock_get_collection
+        logger.info("Patched Beanie Document (no MongoDB available — using mocks)")
+    except Exception as e:
+        logger.warning(f"Could not patch Beanie: {e}")
 
 
 @pytest.fixture(scope="session")
@@ -67,14 +79,112 @@ def mongodb_url() -> str:
     return os.getenv("MONGODB_URL", "mongodb://localhost:27017/test_pitch_forge")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _init_beanie_if_mongodb():
+    """Initialize Beanie with real MongoDB when MONGODB_URL is available
+    and Beanie >= 2.0 is installed.
+
+    With Beanie 1.x (Docker), skip — the module-level legacy mock handles it.
+    """
+    import os
+    mongodb_url = os.getenv("MONGODB_URL")
+    if not mongodb_url:
+        return  # No MongoDB available; module-level mock will be used
+
+    # Only attempt Beanie init with version >= 2.0
+    try:
+        import beanie
+        if tuple(int(x) for x in beanie.__version__.split(".")[:2]) < (2, 0):
+            logger.info("Beanie < 2.0 detected — skipping real DB init (use module mock)")
+            return
+    except Exception:
+        return
+
+    try:
+        import asyncio
+        from motor.motor_asyncio import AsyncIOMotorClient
+        from beanie import init_beanie
+
+        async def _init():
+            client = AsyncIOMotorClient(mongodb_url)
+            database = client.get_default_database()
+            await init_beanie(
+                database=database,
+                document_models=[
+                    "app.database.User",
+                    "app.database.Project",
+                    "app.database.ResearchResult",
+                    "app.database.Payment",
+                    "app.database.Job",
+                    "app.database.TokenUsage",
+                    "app.database.TokenPurchase",
+                    "app.database.ApiKey",
+                    "app.database.ProjectVersion",
+                    "app.database.Subscription",
+                    "app.database.ProcessedWebhookEvent",
+                    "app.database.ContactSubmission",
+                    "app.database.SurveySubmission",
+                    "app.models.legal.LegalDocument",
+                    "app.models.legal.UserLegalAcceptance",
+                    "app.models.legal.ConsentRecord",
+                    "app.models.legal.DataDeletionRequest",
+                    "app.models.legal.DataExportRequest",
+                    "app.models.email_verification.EmailVerification",
+                    "app.models.two_factor.TwoFactorSecret",
+                    "app.models.two_factor.TwoFactorAttempt",
+                    "app.models.audit.AuditEvent",
+                    "app.services.audit_service._AuditCounter",
+                    "app.models.usage.UsageEvent",
+                    "app.models.usage.MonthlyUsage",
+                    "app.models.coupon.Coupon",
+                    "app.models.coupon.Redemption",
+                    "app.models.llm_cost.LLMCost",
+                    "app.email_lifecycle.models.EmailEvent",
+                    "app.email_lifecycle.models.UnsubscribeToken",
+                    "app.referrals.models.Referral",
+                    "app.webhooks.models.WebhookEndpoint",
+                    "app.webhooks.models.WebhookDelivery",
+                    "app.models.marketplace.Template",
+                    "app.models.marketplace.TemplatePurchase",
+                    "app.models.quality.EvalResult",
+                ],
+            )
+            logger.info("Beanie initialized with real MongoDB for test session")
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        loop.run_until_complete(_init())
+    except Exception as e:
+        logger.warning(f"Beanie real-DB init failed (non-fatal): {e}")
+
+
 @pytest.fixture(autouse=True)
 def _skip_if_no_mongodb(request):
-    """Skip tests marked with @pytest.mark.mongodb when MongoDB is not available."""
+    """Skip tests marked with @pytest.mark.mongodb when:
+    - MongoDB is not available (no MONGODB_URL), OR
+    - Beanie < 2.0 is installed (Docker runs 1.30; .in_() API requires 2.x)
+    """
     import os
-    if os.getenv("MONGODB_URL"):
-        return
-    for marker in request.node.iter_markers(name="mongodb"):
-        pytest.skip("MongoDB not available (set MONGODB_URL env var)")
+
+    # Check Beanie version — route tests need 2.x
+    try:
+        import beanie
+        beanie_version = tuple(int(x) for x in beanie.__version__.split(".")[:2])
+        if beanie_version < (2, 0):
+            for marker in request.node.iter_markers(name="mongodb"):
+                pytest.skip(f"Beanie {beanie.__version__} < 2.0 (route tests need .in_() API)")
+                return
+    except Exception:
+        pass
+
+    # Check MongoDB availability
+    if not os.getenv("MONGODB_URL"):
+        for marker in request.node.iter_markers(name="mongodb"):
+            pytest.skip("MongoDB not available (set MONGODB_URL env var)")
+            return
 
 
 @pytest.fixture
