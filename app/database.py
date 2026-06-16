@@ -69,6 +69,8 @@ async def init_db():
                 "app.webhooks.models.WebhookDelivery",
                 "app.models.marketplace.Template",
                 "app.models.marketplace.TemplatePurchase",
+                "app.database.ContactSubmission",
+                "app.database.SurveySubmission",
             ],
         )
         logger.info(f"MongoDB connected: {settings.MONGODB_DB_NAME}")
@@ -363,6 +365,43 @@ class ProjectVersion(TimestampMixin, Document):
         name = "project_versions"
         indexes = [
             [("project_id", 1), ("version", -1)],
+        ]
+
+
+# ── Landing Page Submissions ─────────────────────────────
+
+
+class ContactSubmission(TimestampMixin, Document):
+    """Contact form submissions from generated landing pages."""
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    email: str
+    message: str
+    forward_to: str = ""
+    project: str = ""
+
+    class Settings:
+        name = "contact_submissions"
+        indexes = [
+            [("created_at", -1)],
+            "project",
+        ]
+
+
+class SurveySubmission(TimestampMixin, Document):
+    """Survey/feedback submissions from generated landing pages."""
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    feedback: str
+    email: str = ""
+    project: str = ""
+
+    class Settings:
+        name = "survey_submissions"
+        indexes = [
+            [("created_at", -1)],
+            "project",
         ]
 
 

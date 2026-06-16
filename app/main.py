@@ -55,6 +55,8 @@ from .routes import marketplace as marketplace_routes
 from .routes import ab_copy as ab_copy_routes
 from .routes import ab_prompts as ab_prompts_routes
 from .routes import waitlist as waitlist_routes
+from .routes import landing_generate as landing_generate_routes
+from .routes import landing_capture as landing_capture_routes
 from .middleware.security_headers import SecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
@@ -296,6 +298,9 @@ PUBLIC_PATH_PREFIXES = {
     "/api/v1/ab-prompts/rate",  # Public output rating (runtime)
     "/api/v1/ab-prompts/score",  # Public quality scoring (runtime)
     "/api/waitlist",  # Waitlist subscription (public)
+    "/api/contact/submit",  # Contact form from landing pages (public)
+    "/api/survey/submit",  # Survey form from landing pages (public)
+    "/api/v1/landing/",  # Landing page generation (public product endpoint)
 }
 
 
@@ -433,6 +438,8 @@ app.include_router(marketplace_routes.router)
 app.include_router(ab_copy_routes.router)
 app.include_router(ab_prompts_routes.router)
 app.include_router(waitlist_routes.router)
+app.include_router(landing_capture_routes.router)
+app.include_router(landing_generate_routes.router)
 
 
 # ── WebSocket ──────────────────────────────────────────
