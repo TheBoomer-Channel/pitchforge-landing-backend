@@ -36,8 +36,20 @@ async def get_briefing():
     - Recurring patterns (≥3 occurrences)
     - Actionable tips
     - Error trend (improving/stable/degrading)
+
+    Returns an empty briefing if the vault hasn't been initialized yet.
     """
     agent = _get_agent()
+    vault_learning_path = Path(_DEFAULT_PROJECT) / ".vault" / "learnings.md"
+    if not vault_learning_path.exists():
+        logger.info("Vault not initialized — returning empty briefing")
+        return {
+            "total_lessons": 0,
+            "new_since_yesterday": 0,
+            "trend": "stable",
+            "patterns": [],
+            "tips": ["💡 Create your first lesson by completing a task — devkit setup required"],
+        }
     try:
         briefing = agent.get_briefing()
         return briefing

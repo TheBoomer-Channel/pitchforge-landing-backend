@@ -104,7 +104,7 @@ async def lifespan(app: FastAPI):
 # ── OpenAPI tags ───────────────────────────────────────
 
 TAGS_METADATA = [
-    {"name": "auth", "description": "Clerk-authenticated user profile & sync. Register/login via Clerk frontend SDK."},
+    {"name": "auth", "description": "Clerk-authenticated user profile & sync."},
     {"name": "research", "description": "Multi-source startup idea research (web, HN, Reddit, GitHub, etc.)"},
     {"name": "planning", "description": "Full planning pipeline: PRD → Functional → Financial → Technical specs"},
     {"name": "generate", "description": "Generate pitch decks, landing pages, and pricing pages"},
@@ -115,16 +115,17 @@ TAGS_METADATA = [
     {"name": "tokens", "description": "Token balance and code generation billing"},
     {"name": "dashboard", "description": "Simple HTML dashboard"},
     {"name": "pdf", "description": "PDF export for pitch decks and reports"},
-    {"name": "versions", "description": "Project version history — snapshot and restore project state"},
-    {"name": "legal", "description": "ToS, Privacy, Cookie Policy, Acceptable Use — versioned, with acceptance tracking"},
+    {"name": "versions", "description": "Project version history — snapshot and restore"},
+    {"name": "legal", "description": "ToS, Privacy, Cookie Policy — versioned with acceptance tracking"},
     {"name": "gdpr", "description": "Data subject rights: export, deletion, consents"},
-    {"name": "auth", "description": "Authentication (Clerk) + email verification magic links + 2FA / TOTP (RFC 6238)"},
-    {"name": "admin", "description": "Admin endpoints: audit log access, chain verification"},
-    {"name": "webhooks", "description": "Webhook endpoints — register and manage outgoing webhooks with HMAC-SHA256 signing"},
-    {"name": "coupons", "description": "Coupon codes & discounts — validate, apply to checkout, admin CRUD"},
-    {"name": "llm", "description": "LLM Router — multi-model routing status, circuit breaker metrics, and fallback chain monitoring (TASK-056)"},
-    {"name": "marketplace", "description": "Template Marketplace — publish, browse, purchase templates with Stripe Connect 70/30 split (TASK-053)"},
+    {"name": "auth", "description": "Auth: Clerk + email verification + 2FA / TOTP"},
+    {"name": "admin", "description": "Admin endpoints: audit log, chain verification"},
+    {"name": "webhooks", "description": "Webhook endpoints — register and manage outgoing webhooks"},
+    {"name": "coupons", "description": "Coupon codes & discounts — validate, apply, admin CRUD"},
+    {"name": "llm", "description": "LLM Router — multi-model routing, circuit breaker, fallback chain (TASK-056)"},
+    {"name": "marketplace", "description": "Template Marketplace — publish, browse, purchase (TASK-053)"},
 ]
+
 
 def _custom_openapi():
     """Inject ClerkSession and ApiKey security schemes into OpenAPI schema."""
@@ -143,7 +144,7 @@ def _custom_openapi():
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
-            "description": "Clerk session token. Get it from your browser's Application > Cookies > __session or call Clerk's getToken().",
+            "description": "Clerk session token. Get it from browser cookies or Clerk SDK.",
         },
         "ApiKey": {
             "type": "apiKey",
@@ -171,7 +172,7 @@ app = FastAPI(
     "1. **Frontend users**: Sign up/login via the web app. Sessions are managed automatically by Clerk.\n"
     "2. **API access**: Get your personal API key from **Settings → API Keys** in the dashboard. "
     "Pass it via the `X-API-Key` header or as `sf_...` Bearer token.\n"
-    "3. **API Reference**: Visit `/docs` to explore and test endpoints with the Scalar API Reference.\n"
+    "3. **API Reference**: Visit `/docs` for the Scalar API Reference.\n"
     "\n"
     "[Clerk Dashboard](https://blessed-octopus-60.clerk.accounts.dev) | "
     "[Stripe Dashboard](https://dashboard.stripe.com)",
@@ -292,7 +293,7 @@ PUBLIC_PATH_PREFIXES = {
     "/dashboard",  # Static files
     "/api/download",  # Asset download (public for preview)
     "/api/files",     # Asset file listing (public for preview)
-    "/api/v1/marketplace/templates",    # Marketplace public browse + detail/preview (no trailing slash — prefix matching uses startswith)
+    "/api/v1/marketplace/templates",    # Marketplace public browse + detail (prefix matching)
     "/api/v1/marketplace/landing-data",  # Public landing preview data
     "/api/v1/ab-prompts/assign",  # Public variant assignment (runtime)
     "/api/v1/ab-prompts/log",  # Public execution logging (runtime)
@@ -335,7 +336,7 @@ async def auth_middleware(request: Request, call_next):
             prefix = api_key[:12]
             keys = await ApiKey.find(
                 ApiKey.key_prefix == prefix,
-                ApiKey.is_active == True,
+                ApiKey.is_active == True,  # noqa: E712
             ).to_list()
 
             for k in keys:
@@ -540,6 +541,3 @@ async def health():
             "gemini_image_gen": {"status": "configured" if settings.GEMINI_API_KEY else "not_configured"},
         },
     }
-
-
-

@@ -103,7 +103,7 @@ class TimestampMixin:
 
 class Project(TimestampMixin, Document):
     """A startup project — the central entity of the app.
-    
+
     TASK-061: Extended with pipeline tracking and output paths.
     Every feature (Research, Planning, CodeGen, Assets) updates its step here.
     """

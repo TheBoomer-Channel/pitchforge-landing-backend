@@ -77,7 +77,7 @@ class EvalRunner:
         results = []
         for case in self._cases:
             try:
-                result = await self._evaluate_single(case, run_id, models)
+                result = await self._evaluate_single(case, run_id)
                 results.append(result)
             except Exception as e:
                 logger.error(f"Eval case {case['id']} failed: {e}")
@@ -164,7 +164,6 @@ class EvalRunner:
         self,
         case: dict,
         run_id: str,
-        models: Optional[list[str]] = None,
     ) -> dict:
         """Run a single eval case through the LLM and score it.
 
@@ -224,7 +223,7 @@ class EvalRunner:
             "actual_output": actual_response,
             "score": score,
             "rubric": rubric,
-            "model": llm_router._last_used_model or "unknown",
+            "model": llm_router.last_used_model or "unknown",
             "task_type": task_type,
             "latency_ms": latency_ms,
             "run_id": run_id,
@@ -272,8 +271,15 @@ Base your score on how well the output satisfies the rubric criteria.
                 temperature=0.1,
                 max_tokens=50,
             )
-            # Parse float from response
-            score = float(result.strip()[:4].strip())
+            # Parse float from response using regex (robust against extra text)
+            import re
+            match = re.search(r'(\d+\.\d+)', result.strip())
+            if match:
+                score = float(match.group(1))
+            else:
+                # Try integer-only match as fallback
+                match = re.search(r'(\d+)', result.strip())
+                score = float(match.group(1)) / 100.0 if match else 0.5
             return max(0.0, min(1.0, score))
         except Exception as e:
             logger.warning(f"LLM-as-judge parsing failed: {e}, using fallback")

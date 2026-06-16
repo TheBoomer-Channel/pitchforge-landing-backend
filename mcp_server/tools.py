@@ -222,7 +222,7 @@ async def analyze_competitors(idea: str) -> str:
                 lines.append(f"- Range: ${r.get('min', 0)} - ${r.get('max', 0)}")
                 lines.append(f"- Median: ${r.get('median', 0)}")
                 lines.append(f"- Free tier available: {pricing.get('free_tier_available', False)}")
-                lines.append(f"\n## Competitors ({len(competitors)} total)")
+        lines.append(f"\n## Competitors ({len(competitors)} total)")
         for c in competitors[:5]:
             name = c.get("name", "?")
             desc = c.get("description", "")[:200]

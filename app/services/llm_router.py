@@ -24,14 +24,12 @@ Usage:
     status = llm_router.get_status()
 """
 
-import asyncio
 import json
 import logging
 import os
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -39,7 +37,7 @@ from typing import Optional
 import httpx
 
 from dotenv import load_dotenv
-from .llm_cost_tracker import cost_tracker, calculate_cost
+from .llm_cost_tracker import cost_tracker
 
 # Resolve .env relative to project root
 _env_path = Path(__file__).resolve().parent.parent.parent / ".env"
@@ -401,6 +399,11 @@ class LLMRouter:
         )
         return self._extract_json(result)
 
+    @property
+    def last_used_model(self) -> Optional[str]:
+        """Get the last successfully used model name."""
+        return self._last_used_model
+
     def get_status(self) -> dict:
         """Get current router status with circuit breaker states."""
         models = {}
@@ -442,8 +445,8 @@ class LLMRouter:
         timeout: int = 180,
     ) -> tuple[str, float, Optional[dict]]:
         """Call a specific model and return (response_text, latency_ms, usage).
-        
-        Returns usage dict for cost tracking (avoids data race on instance state).
+
+        Returns usage dict for cost tracking (avoids data race).
         """
         start = time.monotonic()
         client = await self._get_client()
@@ -519,9 +522,9 @@ class LLMRouter:
         timeout: int = 180,
     ) -> tuple[str, float, None]:
         """Call Google Gemini API (different endpoint format).
-        
+
         Returns (text, latency_ms, None) — Gemini doesn't expose token
-        counts in non-streaming mode, so usage_data is always None.
+        counts in non-streaming, so usage_data is always None.
         """
         start = time.monotonic()
         client = await self._get_client()
@@ -608,11 +611,9 @@ class LLMRouter:
         task_type: str = "chat",
     ):
         """Track LLM cost via cost_tracker.
-        
+
         Args:
             usage_data: Token usage returned by _call_model or None.
-                        Using a parameter instead of instance state avoids data races
-                        when multiple chat() calls run concurrently.
         """
         try:
             if usage_data:

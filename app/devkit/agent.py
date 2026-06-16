@@ -30,6 +30,26 @@ class DevAgent:
         self.briefer = BriefingEngine()
         self.cycle_count = 0
 
+    def _detect_category(self, title: str) -> tuple[str, str]:
+        """Detect category and error_type from a lesson title."""
+        title_lower = title.lower()
+        checks = [
+            (["import", "module", "not found", "missing"], "import_error", "missing_dependency"),
+            (["syntax", "parse", "invalid syntax"], "syntax_error", "syntax"),
+            (["type", "typeerror", "mismatch"], "type_error", "type_mismatch"),
+            (["timeout", "time out", "slow", "hang"], "timeout_error", "timeout"),
+            (["auth", "login", "token", "permission"], "auth_error", "authentication"),
+            (["api", "http", "request", "response"], "api_error", "api_failure"),
+            (["db", "database", "query", "mongo", "sql"], "db_error", "database"),
+            (["config", "env", "setting"], "config_error", "configuration"),
+            (["test", "pytest", "assert"], "test_error", "test_failure"),
+            (["docker", "container", "compose"], "infra_error", "docker"),
+        ]
+        for keywords, category, error_type in checks:
+            if any(w in title_lower for w in keywords):
+                return (category, error_type)
+        return ("runtime_error", "unknown")
+
     def load_lessons_from_vault(self) -> None:
         """Load lessons from vault learnings.md into the briefer."""
         content = self.vault.read("learnings.md")
@@ -41,10 +61,11 @@ class DevAgent:
             line = line.strip()
             if line.startswith("### "):
                 if current.get("title"):
+                    category, error_type = self._detect_category(current["title"])
                     lessons.append(Lesson(
                         id=f"lesson-{len(lessons)+1}",
-                        category="runtime_error",
-                        error_type="unknown",
+                        category=category,
+                        error_type=error_type,
                         message=current.get("body", ""),
                         rule_suggestion=current.get("body", ""),
                         project="startup-factory",
@@ -53,10 +74,11 @@ class DevAgent:
             elif line and current:
                 current["body"] = current.get("body", "") + line + "\n"
         if current.get("title"):
+            category, error_type = self._detect_category(current["title"])
             lessons.append(Lesson(
                 id=f"lesson-{len(lessons)+1}",
-                category="runtime_error",
-                error_type="unknown",
+                category=category,
+                error_type=error_type,
                 message=current.get("body", ""),
                 rule_suggestion=current.get("body", ""),
                 project="startup-factory",
