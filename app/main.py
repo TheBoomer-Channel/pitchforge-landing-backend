@@ -58,6 +58,7 @@ from .routes import waitlist as waitlist_routes
 from .routes import landing_generate as landing_generate_routes
 from .routes import landing_capture as landing_capture_routes
 from .routes import devkit as devkit_routes
+from .routes import ai_quality as ai_quality_routes
 from .middleware.security_headers import SecurityHeadersMiddleware
 
 logger = logging.getLogger(__name__)
@@ -441,6 +442,7 @@ app.include_router(waitlist_routes.router)
 app.include_router(landing_capture_routes.router)
 app.include_router(landing_generate_routes.router)
 app.include_router(devkit_routes.router)
+app.include_router(ai_quality_routes.router)
 
 
 # ── WebSocket ──────────────────────────────────────────

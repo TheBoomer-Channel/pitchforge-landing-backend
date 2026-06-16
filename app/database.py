@@ -71,6 +71,7 @@ async def init_db():
                 "app.models.marketplace.TemplatePurchase",
                 "app.database.ContactSubmission",
                 "app.database.SurveySubmission",
+                "app.models.quality.EvalResult",
             ],
         )
         logger.info(f"MongoDB connected: {settings.MONGODB_DB_NAME}")

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "landing-001",
+    "category": "landing",
+    "prompt": "Write a hero headline and subheadline for a SaaS that helps freelancers send invoices. The product is called 'BillBee' and costs $9/month.",
+    "expected_output": "A compelling headline that mentions BillBee, the benefit (easy invoicing for freelancers), and optionally the price point.",
+    "rubric": "Check: headline mentions product name, clearly states the benefit for freelancers, subheadline adds supporting detail, tone is professional and compelling.",
+    "task_type": "chat"
+  },
+  {
+    "id": "landing-002",
+    "category": "landing",
+    "prompt": "Write a 3-feature section for a landing page of 'CodePilot', an AI code review tool. Each feature needs an icon emoji, a title, and a 1-line description.",
+    "expected_output": "Three features presented with emoji icons, clear titles, and concise descriptions focused on code review benefits.",
+    "rubric": "Check: exactly 3 features, each with emoji + title + description, features relate to code review, copy is concise and benefit-oriented.",
+    "task_type": "chat"
+  },
+  {
+    "id": "pitch-001",
+    "category": "pitch",
+    "prompt": "Write the problem slide for a pitch deck about 'TeamSync' — a remote team collaboration tool that reduces meeting overload. Target: VCs.",
+    "expected_output": "A problem statement that resonates with VCs about remote work pain points: too many meetings, async communication gaps, context switching costs.",
+    "rubric": "Check: identifies a real pain point, uses data/metrics if possible, targets VC audience, sets up the solution slide naturally.",
+    "task_type": "pitch"
+  },
+  {
+    "id": "pitch-002",
+    "category": "pitch",
+    "prompt": "Write the business model slide for a marketplace startup that connects pet owners with local pet-sitters. Commission is 15%.",
+    "expected_output": "Clear explanation of the two-sided marketplace model, 15% commission fee, key metrics (GMV, take rate, LTV/CAC).",
+    "rubric": "Check: explains both sides (pet owners + sitters), mentions 15% commission, shows unit economics understanding, VC-friendly metrics.",
+    "task_type": "pitch"
+  },
+  {
+    "id": "pricing-001",
+    "category": "pricing",
+    "prompt": "Recommend 3 pricing tiers for a project management SaaS. Include feature breakdown for Free ($0), Team ($19/user/mo), and Enterprise ($custom).",
+    "expected_output": "3 tiers with names, prices, and clear feature differentiation. Free has basic features, Team adds collaboration, Enterprise adds SSO and security.",
+    "rubric": "Check: 3 tiers with distinct value props, Free is usable but limited, Team hits the sweet spot, Enterprise has enterprise features, pricing is reasonable.",
+    "task_type": "pricing"
+  },
+  {
+    "id": "pricing-002",
+    "category": "pricing",
+    "prompt": "Explain the pricing rationale for a usage-based API product that charges $0.01 per API call with a $50/month free tier.",
+    "expected_output": "A rationale that justifies the $50 free tier as developer-friendly, explains the $0.01/call pricing versus competitors, and shows how usage scales.",
+    "rubric": "Check: explains freemium strategy, compares to competitors, shows volume economics, addresses developer adoption concerns.",
+    "task_type": "pricing"
+  },
+  {
+    "id": "planning-001",
+    "category": "planning",
+    "prompt": "List the core backend architecture components needed for a multi-tenant SaaS with custom domains and separate databases per tenant.",
+    "expected_output": "A list of components including: tenant router middleware, database connection pool per tenant, custom domain resolver, SSL cert manager, tenant provisioning service.",
+    "rubric": "Check: addresses multi-tenancy at database level, includes custom domain handling, mentions SSL/TLS, considers tenant isolation, mentions middleware/routing.",
+    "task_type": "planning"
+  },
+  {
+    "id": "planning-002",
+    "category": "planning",
+    "prompt": "Design the data model for a job board where companies post jobs and candidates apply. Include the main entities and their relationships.",
+    "expected_output": "Entities: Company, Job, Candidate, Application. Relationships: Company has many Jobs, Candidate has many Applications, Job has many Applications.",
+    "rubric": "Check: covers all 4 main entities, defines relationships correctly, includes key fields for each entity, mentions indexes or constraints.",
+    "task_type": "planning"
+  },
+  {
+    "id": "research-001",
+    "category": "research",
+    "prompt": "Given a list of competitors for an AI note-taking app (Notion, Roam Research, Obsidian, Mem), analyze their key differentiators relative to each other.",
+    "expected_output": "A comparative analysis of each competitor's strengths: Notion (all-in-one), Roam (bidirectional links), Obsidian (local-first, plugins), Mem (AI-native).",
+    "rubric": "Check: identifies each competitor's unique value prop, makes relative comparisons, shows understanding of the market landscape, avoids generic statements.",
+    "task_type": "research"
+  },
+  {
+    "id": "research-002",
+    "category": "research",
+    "prompt": "Summarize the market validation findings for a B2B SaaS in the construction project management space. The validation includes: 15 Reddit threads, 3 HN discussions, and 2 competitor analyses.",
+    "expected_output": "A structured summary covering: overall sentiment, common pain points (delays, communication gaps, document management), desired features, and competitor gaps.",
+    "rubric": "Check: synthesizes findings across sources, identifies top pain points, mentions competitor gaps, provides actionable recommendations, cites specific complaints.",
+    "task_type": "research"
+  },
+  {
+    "id": "code-001",
+    "category": "code",
+    "prompt": "Write a Python FastAPI endpoint that accepts a POST request with a JSON body containing 'email' and 'name', validates the email format, and returns a success response.",
+    "expected_output": "A complete FastAPI endpoint with: POST route, Pydantic model for input, email validation, proper status codes, and error handling.",
+    "rubric": "Check: uses Pydantic models, validates email format, returns proper HTTP status codes (201/422), has error handling, follows FastAPI best practices.",
+    "task_type": "code"
+  },
+  {
+    "id": "code-002",
+    "category": "code",
+    "prompt": "Write a React hook called useDebounce that debounces a value by a configurable delay. Include TypeScript types.",
+    "expected_output": "A TypeScript React hook that: accepts a value and delay, returns the debounced value, cleans up timeout on unmount, uses proper generics.",
+    "rubric": "Check: has proper TypeScript generics, uses useEffect for debounce logic, cleans up with AbortController or clearTimeout, handles edge cases, includes JSDoc.",
+    "task_type": "code"
+  },
+  {
+    "id": "general-001",
+    "category": "general",
+    "prompt": "Explain the CAP theorem in simple terms that a non-technical founder would understand.",
+    "expected_output": "A simple explanation of Consistency, Availability, and Partition Tolerance with a relatable analogy (e.g., a library or phone call analogy).",
+    "rubric": "Check: explains all 3 properties, uses an analogy, avoids jargon, stays accessible to non-technical audience, mentions 'pick 2' trade-off.",
+    "task_type": "chat"
+  },
+  {
+    "id": "general-002",
+    "category": "general",
+    "prompt": "Generate 5 startup ideas in the climate tech space that could be built by a solo founder with $50k seed funding.",
+    "expected_output": "5 specific, actionable climate tech ideas that are achievable for a solo founder with limited budget. Each idea has a name, problem, and suggested approach.",
+    "rubric": "Check: ideas are specific (not generic), achievable with $50k, targeted at climate/sustainability, suitable for solo founder, each has a clear value prop.",
+    "task_type": "chat"
+  },
+  {
+    "id": "general-003",
+    "category": "general",
+    "prompt": "Compare Next.js vs Remix for a SaaS dashboard application. Give a recommendation with reasoning.",
+    "expected_output": "A balanced comparison of both frameworks covering: routing, data loading, deployment, ecosystem, learning curve. A clear recommendation with rationale.",
+    "rubric": "Check: compares multiple dimensions, provides specific examples, recommendation is justified, mentions trade-offs, stays objective.",
+    "task_type": "chat"
+  }
+]
