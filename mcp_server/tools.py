@@ -11,7 +11,6 @@ This module follows the same pattern as the routes — using existing Services
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from datetime import datetime
@@ -207,11 +206,11 @@ async def analyze_competitors(idea: str) -> str:
             critical = pain_summary.get("critical", [])
             common = pain_summary.get("common", [])
             if critical:
-                lines.append(f"\n## Critical Pain Points")
+                lines.append("\n## Critical Pain Points")
                 for p in critical:
                     lines.append(f"- 🔴 {p}")
             if common:
-                lines.append(f"\n## Common Pain Points")
+                lines.append("\n## Common Pain Points")
                 for p in common:
                     lines.append(f"- 🟡 {p}")
 
@@ -219,12 +218,11 @@ async def analyze_competitors(idea: str) -> str:
             pricing = insights.get("pricing_landscape", {})
             if pricing.get("range"):
                 r = pricing["range"]
-                lines.append(f"\n## Pricing Landscape")
+                lines.append("\n## Pricing Landscape")
                 lines.append(f"- Range: ${r.get('min', 0)} - ${r.get('max', 0)}")
                 lines.append(f"- Median: ${r.get('median', 0)}")
                 lines.append(f"- Free tier available: {pricing.get('free_tier_available', False)}")
-
-        lines.append(f"\n## Competitors ({len(competitors)} total)")
+                lines.append(f"\n## Competitors ({len(competitors)} total)")
         for c in competitors[:5]:
             name = c.get("name", "?")
             desc = c.get("description", "")[:200]
@@ -266,7 +264,7 @@ async def check_project_status(project_id: str) -> str:
             f"# Project Status: {result.get('title', project_id[:12])}",
             "",
             f"**Status:** {result.get('status', 'unknown')}",
-            f"**Pipeline:**",
+            "**Pipeline:**",
         ]
         pipeline = result.get("pipeline", {})
         for step, state in pipeline.items():
@@ -293,7 +291,7 @@ async def health_check() -> str:
     lines = [
         "# PitchForge Health Check",
         "",
-        f"**MCP Server:** ✅ Running (v0.1.0)",
+        "**MCP Server:** ✅ Running (v0.1.0)",
         f"**API Status:** {'✅' if api_status == 'ok' else '❌'} {api_status}",
         f"**Database:** {db_status}",
         "",

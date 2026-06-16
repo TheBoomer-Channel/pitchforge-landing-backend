@@ -9,11 +9,8 @@ research, planning, generation, project management, and competitive analysis.
 from __future__ import annotations
 
 import logging
-import os
-import sys
 from typing import Any
 
-import mcp.server as mcp_server
 import mcp.server.stdio
 import mcp.types as types
 from mcp.server.lowlevel import Server
@@ -82,7 +79,8 @@ async def handle_list_tools() -> list[types.Tool]:
         ),
         types.Tool(
             name="analyze_competitors",
-            description="Extract structured competitor analysis with table stakes, differentiation gaps, and pricing landscape",
+            description="Extract structured competitor analysis with table stakes,"
+            " differentiation gaps, and pricing landscape",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -201,26 +199,22 @@ def main():
         sse = SseServerTransport("/mcp/messages")
 
         # ── Auth middleware for SSE transport ──────────
-        class MCPAuthMiddleware(BaseHTTPMiddleware):
+        class _MCPAuthMiddleware(BaseHTTPMiddleware):
             """Validates Bearer token on all requests except /health."""
             async def dispatch(self, request, call_next):
                 if request.url.path == "/health":
                     return await call_next(request)
-
                 auth_header = request.headers.get("Authorization", "")
                 if auth_header.startswith("Bearer "):
                     token = auth_header[7:]
                     if auth.verify_token(token):
                         return await call_next(request)
-
-                # Check if auth is configured at all
                 if not auth.get_mcp_api_key():
-                    # Dev mode: no auth required
                     return await call_next(request)
-
                 return JSONResponse(
                     status_code=401,
-                    content={"error": "Unauthorized", "message": "Valid MCP_API_KEY required"},
+                    content={"error": "Unauthorized",
+                             "message": "Valid MCP_API_KEY required"},
                 )
 
         async def handle_sse(request):
@@ -244,7 +238,7 @@ def main():
                 Route("/health", endpoint=lambda r: {"status": "ok"}),
             ],
         )
-        starlette_app.add_middleware(MCPAuthMiddleware)
+        starlette_app.add_middleware(_MCPAuthMiddleware)
 
         import uvicorn
         logger.info(f"PitchForge MCP Server starting on {args.host}:{args.port} (SSE)")
