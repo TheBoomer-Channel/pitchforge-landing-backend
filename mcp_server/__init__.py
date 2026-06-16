@@ -1,10 +1,11 @@
-"""MCP Server — PitchForge tools for Claude Desktop, Cursor, and MCP clients.
+"""MCP Server — Model Context Protocol for PitchForge.
 
-TASK-055 — MCP Server nativo.
+Exposes PitchForge capabilities as MCP tools so that AI agents
+(Claude, Cursor, Codebuff, etc.) can research ideas, generate
+pitch decks, landing pages, and pricing directly via the protocol.
 
-This package implements a Model Context Protocol server that exposes
-PitchForge tools (research, generate pitch, estimate pricing, etc.)
-to MCP-compatible clients.
+Transport: SSE (Server-Sent Events) on port 8087.
+Auth: Bearer token via MCP_API_KEY env var.
 """
 
 __version__ = "0.1.0"
