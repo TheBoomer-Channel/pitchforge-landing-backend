@@ -300,7 +300,7 @@ PUBLIC_PATH_PREFIXES = {
     "/api/waitlist",  # Waitlist subscription (public)
     "/api/contact/submit",  # Contact form from landing pages (public)
     "/api/survey/submit",  # Survey form from landing pages (public)
-    "/api/v1/landing/",  # Landing page generation (public product endpoint)
+    "/api/v1/landing",  # Landing page generation (public product endpoint - no trailing slash!)
 }
 
 
