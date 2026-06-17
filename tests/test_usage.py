@@ -6,7 +6,6 @@ Mongodb-dependent tests moved to tests/integration/test_usage.py.
 from __future__ import annotations
 
 import pytest
-from datetime import datetime, timezone
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -15,13 +14,9 @@ from app.routes.usage import router as usage_router
 
 class _StubUser:
     clerk_user_id = "user_test"
-    email = "[email protected]"
+    email = "test@test.com"
     name = "Test"
     tier = "free"
-    trial_started_at = None
-    trial_ends_at = None
-    trial_extended = False
-    async def save(self): pass
 
 
 async def _fake_current_user():
@@ -42,31 +37,9 @@ def client(app):
     return TestClient(app)
 
 
-@pytest.mark.skip(reason="Moved to tests/integration/test_usage.py")
-def test_usage_status_returns_metrics(client):
-    r = client.get("/api/v1/usage/status")
-    assert r.status_code == 200
-    body = r.json()
-    for metric in ["research_call", "llm_token_in", "llm_token_out", "pdf_export", "api_call"]:
-        assert metric in body, f"Missing {metric} in response"
-        assert "current" in body[metric]
-        assert "soft_cap" in body[metric]
-        assert "hard_cap" in body[metric]
-        assert "pct" in body[metric]
-
-
 def test_usage_limits_returns_caps(client):
     r = client.get("/api/v1/usage/limits")
     assert r.status_code == 200
-
-
-@pytest.mark.skip(reason="Moved to tests/integration/test_usage.py")
-def test_usage_history_empty(client):
-    r = client.get("/api/v1/usage/history")
-    assert r.status_code == 200
-    body = r.json()
-    assert "month" in body
-    assert "metrics" in body
 
 
 def test_usage_history_with_bad_metric(client):
