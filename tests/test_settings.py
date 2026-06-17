@@ -75,7 +75,6 @@ def test_research_routes_exist():
 # ── Output directory lookup (integration-ish) ──────────
 
 @pytest.mark.asyncio
-@pytest.mark.mongodb
 async def test_planning_output_dir_returns_none_for_unknown_project():
     """_get_planning_output_dir should return None for nonexistent project."""
     from app.routes.planning import _get_planning_output_dir
@@ -84,7 +83,6 @@ async def test_planning_output_dir_returns_none_for_unknown_project():
 
 
 @pytest.mark.asyncio
-@pytest.mark.mongodb
 async def test_generate_output_dir_returns_none_for_unknown_project():
     """_get_project_output_dir should return None for nonexistent project."""
     from app.routes.generate import _get_project_output_dir

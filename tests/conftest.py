@@ -68,25 +68,44 @@ try:
 
     Document.get_motor_collection = _mock_get_collection
     logger.info("Patched Beanie Document.get_motor_collection for tests")
+
+    # 3. Patch Job model for class-level access + find() bypass
+    #    Without init_beanie(), Pydantic raises AttributeError on field access.
+    #    Job.find() returns a real Beanie FindMany whose .sort() validates types
+    #    and rejects MagicMock. Both are patched here.
+    _eq_mock = MagicMock()
+    _eq_mock.__eq__ = lambda self, other: MagicMock()
+    _eq_mock.__lt__ = lambda self, other: MagicMock()
+    _eq_mock.__gt__ = lambda self, other: MagicMock()
+
+    _mock_query = MagicMock()
+    _mock_query.sort = MagicMock(return_value=_mock_query)
+    _mock_query.limit = MagicMock(return_value=_mock_query)
+    _mock_query.to_list = AsyncMock(return_value=[])
+
+    try:
+        from app.database import Job as _Job
+        for _field in ("project_id", "type", "status", "created_at"):
+            setattr(_Job, _field, _eq_mock)
+        _Job.find = MagicMock(return_value=_mock_query)
+        logger.info("Patched Job model fields + find() for tests")
+    except Exception:
+        pass
 except Exception as e:
     logger.warning(f"Could not patch Beanie: {e}")
 
 
 @pytest.fixture(autouse=True)
 def _skip_if_no_mongodb(request):
-    """Skip tests marked with @pytest.mark.mongodb.
+    """Skip tests marked with @pytest.mark.mongodb if MongoDB is unavailable.
 
-    The module-level Beanie mock (Document mock) handles basic CRUD but
-    cannot cover model field access (e.g. Job.project_id) for all document
-    models. Tests that need real Beanie model field resolution should:
-      - Be moved to tests/integration/ and run against live Docker API, or
-      - Use full init_beanie() with a real MongoDB connection.
+    All @pytest.mark.mongodb tests have been converted to integration tests
+    (tests/integration/) or patched with model-level mocks in this conftest.
+    This fixture remains as a safety net for any future mongodb-marked tests.
     """
     for _ in request.node.iter_markers(name="mongodb"):
-        pytest.skip(
-            "@pytest.mark.mongodb test skipped: Beanie mock does not cover "
-            "all model field access. Use tests/integration/ for real DB tests."
-        )
+        if not _MONGODB_AVAILABLE:
+            pytest.skip("MongoDB not available (MONGODB_URL not set)")
         return
 
 
