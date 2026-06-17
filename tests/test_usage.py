@@ -1,4 +1,7 @@
-"""Tests for usage tracker — TASK-019."""
+"""Tests for usage tracker — TASK-019.
+
+Mongodb-dependent tests moved to tests/integration/test_usage.py.
+"""
 
 from __future__ import annotations
 
@@ -39,7 +42,7 @@ def client(app):
     return TestClient(app)
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_usage.py")
 def test_usage_status_returns_metrics(client):
     r = client.get("/api/v1/usage/status")
     assert r.status_code == 200
@@ -57,7 +60,7 @@ def test_usage_limits_returns_caps(client):
     assert r.status_code == 200
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_usage.py")
 def test_usage_history_empty(client):
     r = client.get("/api/v1/usage/history")
     assert r.status_code == 200

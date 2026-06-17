@@ -76,19 +76,16 @@ except Exception as e:
 def _skip_if_no_mongodb(request):
     """Skip tests marked with @pytest.mark.mongodb.
 
-    Route tests (mongodb-marked) are skipped when MongoDB IS available too,
-    because Beanie's motor client binds to its creation event loop, which
-    conflicts with both TestClient's anyio portal and pytest-asyncio's
-    per-test event loops in Mode.AUTO.
-
-    These tests should be converted to integration tests that hit a live
-    server using httpx.AsyncClient from OUTSIDE the test process.
+    The module-level Beanie mock (Document mock) handles basic CRUD but
+    cannot cover model field access (e.g. Job.project_id) for all document
+    models. Tests that need real Beanie model field resolution should:
+      - Be moved to tests/integration/ and run against live Docker API, or
+      - Use full init_beanie() with a real MongoDB connection.
     """
-    for marker in request.node.iter_markers(name="mongodb"):
+    for _ in request.node.iter_markers(name="mongodb"):
         pytest.skip(
-            "Route/integration test skipped: Beanie motor client event-loop "
-            "binding conflicts with TestClient portal and pytest-asyncio loops. "
-            "Use integration tests against a live server instead."
+            "@pytest.mark.mongodb test skipped: Beanie mock does not cover "
+            "all model field access. Use tests/integration/ for real DB tests."
         )
         return
 

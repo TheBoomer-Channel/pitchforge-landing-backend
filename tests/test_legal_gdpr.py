@@ -1,13 +1,6 @@
 """Smoke tests for legal + GDPR routes (TASK-010 + TASK-012).
 
-These tests stub the auth dependency so they don't require a real
-Clerk connection or a running MongoDB. They exercise:
-  * Legal version listing
-  * Legal document retrieval (markdown content)
-  * Version history
-  * Invalid slug 404
-  * GDPR deletion request → cancel flow
-  * GDPR consents POST/GET
+Mongodb-dependent tests moved to tests/integration/test_legal_gdpr.py.
 """
 
 from __future__ import annotations
@@ -61,7 +54,7 @@ def client(app):
 # ── Legal tests ────────────────────────────────────────
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_get_legal_version_returns_dict(client):
     """Smoke: endpoint responds, may be empty if no DB."""
     r = client.get("/api/v1/legal/version")
@@ -69,7 +62,7 @@ def test_get_legal_version_returns_dict(client):
     assert isinstance(r.json(), dict)
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_get_legal_doc_returns_markdown(client):
     r = client.get("/api/v1/legal/terms")
     assert r.status_code == 200
@@ -82,7 +75,7 @@ def test_get_legal_doc_returns_markdown(client):
     assert body["reading_minutes"] >= 1
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_get_all_legal_docs(client):
     for slug in ("terms", "privacy", "cookies", "aup"):
         r = client.get(f"/api/v1/legal/{slug}")
@@ -95,7 +88,7 @@ def test_invalid_slug_404(client):
     assert r.status_code == 404
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_legal_history_endpoint(client):
     r = client.get("/api/v1/legal/privacy/history")
     assert r.status_code == 200
@@ -129,7 +122,7 @@ def test_accept_legal_invalid_slug(client):
 # ── GDPR tests ─────────────────────────────────────────
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_deletion_status_empty(client):
     r = client.get("/api/v1/users/me/deletion-status")
     assert r.status_code == 200
@@ -137,7 +130,7 @@ def test_deletion_status_empty(client):
     assert r.status_code in (200, 500)
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_cancel_deletion_when_none(client):
     r = client.post("/api/v1/users/me/cancel-deletion")
     # 404 if no DB, 404 if no pending; both acceptable in smoke test
@@ -149,7 +142,7 @@ def test_post_consent_invalid_body(client):
     assert r.status_code == 400
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_legal_gdpr.py")
 def test_post_consent_validates_types(client):
     r = client.post(
         "/api/v1/users/me/consents",

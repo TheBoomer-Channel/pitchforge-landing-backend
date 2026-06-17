@@ -1,4 +1,7 @@
-"""Smoke tests for TASK-018 (Free trial) — status + cron endpoints."""
+"""Smoke tests for TASK-018 (Free trial) — status + cron endpoints.
+
+All mongodb-dependent tests have been moved to tests/integration/test_trial.py.
+"""
 
 from __future__ import annotations
 
@@ -40,7 +43,7 @@ def client(app):
     return TestClient(app)
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_trial.py — run with pytest tests/integration/")
 def test_trial_status_no_trial(client):
     r = client.get("/api/v1/trial/status")
     assert r.status_code == 200
@@ -50,7 +53,7 @@ def test_trial_status_no_trial(client):
     assert body["effective_tier"] == "free"
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_trial.py — run with pytest tests/integration/")
 def test_trial_status_in_trial(client, monkeypatch):
     user = _StubUser()
     now = datetime.now(timezone.utc)
@@ -69,7 +72,7 @@ def test_trial_status_in_trial(client, monkeypatch):
     assert body["days_remaining"] >= 8
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_trial.py — run with pytest tests/integration/")
 def test_start_trial_idempotent(client, monkeypatch):
     user = _StubUser()
     user.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=5)
@@ -90,7 +93,7 @@ def test_cron_requires_secret(client):
     assert r.status_code == 401
 
 
-@pytest.mark.mongodb
+@pytest.mark.skip(reason="Moved to tests/integration/test_trial.py — run with pytest tests/integration/")
 def test_cron_with_secret_works(client, monkeypatch):
     import os
     monkeypatch.setenv("TRIAL_CRON_SECRET", "test-secret-123")
