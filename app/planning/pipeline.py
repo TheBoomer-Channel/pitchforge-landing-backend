@@ -32,7 +32,7 @@ class PlanningPipeline:
     def __init__(self):
         self.start_time: float = 0.0
 
-    async def run(self, report: ResearchReport, documents: list[str] | None = None) -> PlanningOutput:
+    async def run(self, report: ResearchReport, documents: list[str] | None = None, use_llm: bool = True) -> PlanningOutput:
         """Run generators for selected documents and return combined output.
 
         TASK-065: documents param controls which docs to generate.
@@ -50,7 +50,7 @@ class PlanningPipeline:
         prd = None
         if "prd" in selected:
             logger.info("  Phase: PRD...")
-            prd = await generate_prd(report)
+            prd = await generate_prd(report, use_llm=use_llm)
             logger.info(f"  ✅ PRD: {prd.product_name or 'generated'}")
         else:
             prd = PRDSpec()
@@ -59,7 +59,7 @@ class PlanningPipeline:
         functional = None
         if "memoria_funcional" in selected:
             logger.info("  Phase: Functional Spec...")
-            functional = await generate_functional(report)
+            functional = await generate_functional(report, use_llm=use_llm)
             logger.info(f"  ✅ Functional: {len(functional.core_features)} features")
         else:
             functional = FunctionalSpec()
@@ -68,7 +68,7 @@ class PlanningPipeline:
         financial = None
         if "pricing" in selected:
             logger.info("  Phase: Financial Model...")
-            financial = await generate_financial(report)
+            financial = await generate_financial(report, use_llm=use_llm)
             logger.info(f"  ✅ Financial: {len(financial.pricing_tiers)} tiers")
         else:
             financial = FinancialModel()
@@ -77,14 +77,19 @@ class PlanningPipeline:
         technical = None
         if "memoria_tecnica" in selected:
             logger.info("  Phase: Technical Spec...")
-            technical = await generate_technical(report)
+            technical = await generate_technical(report, use_llm=use_llm)
             logger.info(f"  ✅ Technical: {len(technical.stack_table)} stack layers")
         else:
             technical = TechnicalSpec()
 
         # TASK-065 — New documents (generated as structured JSON via LLM)
+        # Skip extra doc generation when use_llm=false (would be slow + requires LLM)
         extra_docs = {}
-        new_doc_ids = selected - {"prd", "memoria_funcional", "pricing", "memoria_tecnica"}
+        if not use_llm:
+            logger.info("  Skipping extra docs (use_llm=false)")
+            new_doc_ids = set()
+        else:
+            new_doc_ids = selected - {"prd", "memoria_funcional", "pricing", "memoria_tecnica"}
         for doc_id in sorted(new_doc_ids):
             label = get_document_label(doc_id)
             logger.info(f"  Generating: {label} ({doc_id})...")
@@ -120,6 +125,7 @@ class PlanningPipeline:
         output_dir: str,
         generate_code: bool = False,
         documents: list[str] | None = None,
+        use_llm: bool = True,
     ) -> dict:
         """Run pipeline and save JSON + markdown + HTML. Optionally generate code.
         
@@ -128,7 +134,7 @@ class PlanningPipeline:
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
 
-        output = await self.run(report, documents=documents)
+        output = await self.run(report, documents=documents, use_llm=use_llm)
 
         # 1. JSON
         json_path = out / "planning_report.json"

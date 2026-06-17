@@ -70,8 +70,10 @@ def _deterministic_prd(report: ResearchReport) -> PRDSpec:
     )
 
 
-async def generate_prd(report: ResearchReport) -> PRDSpec:
+async def generate_prd(report: ResearchReport, use_llm: bool = True) -> PRDSpec:
     """Generate full Product Requirements Document using DeepSeek Pro."""
+    if not use_llm:
+        return _deterministic_prd(report)
     try:
         competitors_text = "\n".join(
             f"- {c.name}: {c.description[:150]} | Pains: {'; '.join(c.pain_points[:2])}" if c.pain_points else f"- {c.name}: {c.description[:150]}"

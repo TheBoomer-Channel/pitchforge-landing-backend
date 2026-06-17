@@ -62,8 +62,10 @@ def _deterministic_functional(report: ResearchReport) -> FunctionalSpec:
     )
 
 
-async def generate_functional(report: ResearchReport) -> FunctionalSpec:
+async def generate_functional(report: ResearchReport, use_llm: bool = True) -> FunctionalSpec:
     """Generate functional specification using DeepSeek Pro."""
+    if not use_llm:
+        return _deterministic_functional(report)
     try:
         features_text = "\n".join(f"- {f}" for f in (report.recommended_mvp_features or []))
         competitors_text = "\n".join(

@@ -84,8 +84,10 @@ def _deterministic_financial(report: ResearchReport) -> FinancialModel:
     )
 
 
-async def generate_financial(report: ResearchReport) -> FinancialModel:
+async def generate_financial(report: ResearchReport, use_llm: bool = True) -> FinancialModel:
     """Generate financial model using DeepSeek Pro."""
+    if not use_llm:
+        return _deterministic_financial(report)
     try:
         competitors_text = "\n".join(
             f"- {c.name}: model={c.business_model or 'Unknown'}, funding={c.funding or 'Unknown'}, market={c.target_market or 'Unknown'}"

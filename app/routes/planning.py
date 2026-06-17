@@ -30,6 +30,7 @@ async def start_planning(
     project_id: Optional[str] = Query(None, description="Reuse existing project research"),
     research_json_path: Optional[str] = Query(None, description="Path to existing research JSON"),
     documents: Optional[str] = Query(None, description="Comma-separated document IDs or 'mvp'/'all'"),
+    use_llm: bool = Query(True, description="Use LLM for generation (set false for fast deterministic mode)"),
 ):
     """Run the full planning pipeline: PRD → Functional → Financial → Technical.
     
@@ -52,22 +53,25 @@ async def start_planning(
 
     # 3. Run research inline if no existing data
     if not report:
-        os.environ["RESEARCH_USE_LLM"] = "true"
+        os.environ["RESEARCH_USE_LLM"] = str(use_llm).lower()
         report = await run_inline_research(idea=idea)
         project_id = await ensure_project_and_research(idea, report, project_id)
 
     # Run pipeline with document selection
     out_dir = make_output_dir(report.idea, PLANNING_DIR)
     doc_list = documents.split(",") if documents else None
-    results = await pipeline.run_and_save(report, output_dir=str(out_dir), documents=doc_list)
+    results = await pipeline.run_and_save(report, output_dir=str(out_dir), documents=doc_list, use_llm=use_llm)
 
-    # Also generate pitch/landing/pricing
-    try:
-        from ..generator import generate_all
-        gen_results = await generate_all(report, output_dir=str(out_dir))
-        results.update(gen_results)
-    except Exception as e:
-        logger.warning(f"Generator failed: {e}")
+    # Also generate pitch/landing/pricing (skip if use_llm=false — requires AI image gen)
+    if use_llm:
+        try:
+            from ..generator import generate_all
+            gen_results = await generate_all(report, output_dir=str(out_dir))
+            results.update(gen_results)
+        except Exception as e:
+            logger.warning(f"Generator failed: {e}")
+    else:
+        logger.info("Skipping generate_all (use_llm=false)")
 
     # Store job record for state tracking
     job = await create_job_record(project_id, "planning", str(out_dir), {

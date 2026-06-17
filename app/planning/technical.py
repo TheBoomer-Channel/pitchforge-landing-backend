@@ -52,8 +52,10 @@ def _deterministic_technical(report: ResearchReport) -> TechnicalSpec:
     )
 
 
-async def generate_technical(report: ResearchReport) -> TechnicalSpec:
+async def generate_technical(report: ResearchReport, use_llm: bool = True) -> TechnicalSpec:
     """Generate technical specification using DeepSeek Pro."""
+    if not use_llm:
+        return _deterministic_technical(report)
     try:
         features_text = "\n".join(f"- {f}" for f in (report.recommended_mvp_features or []))
 
