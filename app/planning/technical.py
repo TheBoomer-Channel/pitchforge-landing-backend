@@ -10,9 +10,187 @@ from app.research.models import ResearchReport
 
 logger = logging.getLogger(__name__)
 
+# ── Module-level entity patterns: (keywords, entity_name, fields, relations) ──
+_ENTITY_PATTERNS: list[tuple[list[str], str, list[dict], list[str]]] = [
+    (["subscription", "plan", "pricing", "tier", "billing"],
+     "Subscription",
+     [{"name": "id", "type": "uuid"}, {"name": "user_id", "type": "relation"}, {"name": "plan", "type": "string"}, {"name": "status", "type": "string"}, {"name": "current_period_end", "type": "datetime"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["organization", "team", "workspace", "company"],
+     "Organization",
+     [{"name": "id", "type": "uuid"}, {"name": "name", "type": "string"}, {"name": "slug", "type": "string"}, {"name": "owner_id", "type": "relation"}, {"name": "created_at", "type": "datetime"}],
+     ["HasMany: User", "HasMany: Project"]),
+    (["project", "repository", "repo"],
+     "Project",
+     [{"name": "id", "type": "uuid"}, {"name": "name", "type": "string"}, {"name": "description", "type": "string"}, {"name": "owner_id", "type": "relation"}, {"name": "status", "type": "string"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User", "HasMany: Task"]),
+    (["task", "todo", "issue"],
+     "Task",
+     [{"name": "id", "type": "uuid"}, {"name": "title", "type": "string"}, {"name": "description", "type": "string"}, {"name": "assignee_id", "type": "relation"}, {"name": "status", "type": "string"}, {"name": "priority", "type": "string"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User", "BelongsTo: Project"]),
+    (["payment", "invoice", "transaction", "receipt"],
+     "Payment",
+     [{"name": "id", "type": "uuid"}, {"name": "user_id", "type": "relation"}, {"name": "amount", "type": "float"}, {"name": "currency", "type": "string"}, {"name": "status", "type": "string"}, {"name": "stripe_payment_id", "type": "string"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["notification", "alert", "in-app"],
+     "Notification",
+     [{"name": "id", "type": "uuid"}, {"name": "user_id", "type": "relation"}, {"name": "type", "type": "string"}, {"name": "title", "type": "string"}, {"name": "body", "type": "text"}, {"name": "read", "type": "boolean"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["file", "upload", "attachment", "document", "image"],
+     "File",
+     [{"name": "id", "type": "uuid"}, {"name": "name", "type": "string"}, {"name": "url", "type": "string"}, {"name": "size_bytes", "type": "int"}, {"name": "mime_type", "type": "string"}, {"name": "owner_id", "type": "relation"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["integration", "webhook", "connect"],
+     "Integration",
+     [{"name": "id", "type": "uuid"}, {"name": "user_id", "type": "relation"}, {"name": "provider", "type": "string"}, {"name": "config", "type": "json"}, {"name": "status", "type": "string"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["comment", "review", "feedback"],
+     "Comment",
+     [{"name": "id", "type": "uuid"}, {"name": "author_id", "type": "relation"}, {"name": "body", "type": "text"}, {"name": "parent_type", "type": "string"}, {"name": "parent_id", "type": "uuid"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["analytics", "dashboard", "report", "metrics", "stats"],
+     "AnalyticsEvent",
+     [{"name": "id", "type": "uuid"}, {"name": "user_id", "type": "relation"}, {"name": "event", "type": "string"}, {"name": "properties", "type": "json"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+    (["api key", "apikey", "credential"],
+     "ApiKey",
+     [{"name": "id", "type": "uuid"}, {"name": "user_id", "type": "relation"}, {"name": "name", "type": "string"}, {"name": "key_hash", "type": "string"}, {"name": "last_used", "type": "datetime"}, {"name": "expires_at", "type": "datetime"}, {"name": "created_at", "type": "datetime"}],
+     ["BelongsTo: User"]),
+]
+
+_ARTICLES = frozenset({"a", "an", "the"})
+
 
 def _deterministic_technical(report: ResearchReport) -> TechnicalSpec:
-    """Build technical spec from research report data without LLM."""
+    """Build technical spec from research report data without LLM.
+    
+    TASK-062-filled — data_model and api_endpoints derived from features.
+    """
+    features = report.recommended_mvp_features or []
+    all_text = " ".join(features).lower() + " " + report.summary.lower()
+
+    data_model = []
+    entities_seen = set()
+
+    # Always include User and Session as base
+    data_model.append({
+        "entity": "User",
+        "fields": [
+            {"name": "id", "type": "uuid"},
+            {"name": "email", "type": "string"},
+            {"name": "name", "type": "string"},
+            {"name": "avatar_url", "type": "string"},
+            {"name": "role", "type": "string", "notes": "admin/member"},
+            {"name": "created_at", "type": "datetime"},
+            {"name": "updated_at", "type": "datetime"},
+        ],
+        "relations": ["HasMany: Session"],
+    })
+    entities_seen.add("user")
+    data_model.append({
+        "entity": "Session",
+        "fields": [
+            {"name": "id", "type": "uuid"},
+            {"name": "user_id", "type": "relation"},
+            {"name": "token_hash", "type": "string"},
+            {"name": "expires_at", "type": "datetime"},
+            {"name": "created_at", "type": "datetime"},
+        ],
+        "relations": ["BelongsTo: User"],
+    })
+    entities_seen.add("session")
+
+    for keywords, entity_name, default_fields, default_relations in _ENTITY_PATTERNS:
+        if entity_name.lower() in entities_seen:
+            continue
+        if any(kw in all_text for kw in keywords):
+            data_model.append({
+                "entity": entity_name,
+                "fields": default_fields,
+                "relations": default_relations,
+            })
+            entities_seen.add(entity_name.lower())
+
+    # If fewer than 4 entities found, add a generic one from the product domain
+    if len(data_model) < 4:
+        idea_words = report.idea.split() if report.idea else []
+        # Skip leading articles (a, an, the) to avoid single-letter entity names
+        core_name = "Resource"
+        for w in idea_words:
+            if w.lower() not in _ARTICLES:
+                core_name = w.capitalize()
+                break
+        data_model.append({
+            "entity": core_name,
+            "fields": [
+                {"name": "id", "type": "uuid"},
+                {"name": "name", "type": "string"},
+                {"name": "description", "type": "string"},
+                {"name": "owner_id", "type": "relation"},
+                {"name": "status", "type": "string"},
+                {"name": "created_at", "type": "datetime"},
+            ],
+            "relations": ["BelongsTo: User"],
+        })
+        entities_seen.add(core_name.lower())
+
+    # ── Derive API endpoints from data model + features ──
+    api_endpoints = [
+        {"method": "POST", "path": "/api/v1/auth/register", "description": "Register a new user account", "auth": "public", "rate_limit": "10/min"},
+        {"method": "POST", "path": "/api/v1/auth/login", "description": "Login and receive JWT tokens", "auth": "public", "rate_limit": "20/min"},
+        {"method": "POST", "path": "/api/v1/auth/refresh", "description": "Refresh access token", "auth": "public", "rate_limit": "30/min"},
+        {"method": "GET", "path": "/api/v1/users/me", "description": "Get current user profile", "auth": "required"},
+        {"method": "PATCH", "path": "/api/v1/users/me", "description": "Update current user profile", "auth": "required"},
+        {"method": "DELETE", "path": "/api/v1/users/me", "description": "Delete account (GDPR)", "auth": "required"},
+    ]
+
+    for entity in data_model:
+        name = entity["entity"]
+        slug = name.lower().replace(" ", "-")
+        # Skip User/Session — already covered
+        if slug in ("user", "session"):
+            continue
+        # Standard CRUD
+        api_endpoints.append({
+            "method": "GET",
+            "path": f"/api/v1/{slug}s",
+            "description": f"List {name}s for current user",
+            "auth": "required",
+        })
+        api_endpoints.append({
+            "method": "POST",
+            "path": f"/api/v1/{slug}s",
+            "description": f"Create a new {name}",
+            "auth": "required",
+        })
+        api_endpoints.append({
+            "method": "GET",
+            "path": f"/api/v1/{slug}s/{{id}}",
+            "description": f"Get {name} by ID",
+            "auth": "required",
+        })
+        api_endpoints.append({
+            "method": "PATCH",
+            "path": f"/api/v1/{slug}s/{{id}}",
+            "description": f"Update {name}",
+            "auth": "required",
+        })
+        api_endpoints.append({
+            "method": "DELETE",
+            "path": f"/api/v1/{slug}s/{{id}}",
+            "description": f"Delete {name}",
+            "auth": "required",
+        })
+
+    # Health + webhook endpoints always present
+    api_endpoints.append({
+        "method": "GET", "path": "/api/v1/health", "description": "Health check", "auth": "public",
+    })
+    if any(kw in all_text for kw in ["webhook", "web hook"]):
+        api_endpoints.append({
+            "method": "POST", "path": "/api/v1/webhooks/{provider}", "description": "Receive webhook from external service", "auth": "public (HMAC verified)",
+        })
+
     return TechnicalSpec(
         stack_recommendation=f"Modern web stack: React + FastAPI + PostgreSQL deployed on VPS/Docker",
         stack_table=[
@@ -24,6 +202,8 @@ def _deterministic_technical(report: ResearchReport) -> TechnicalSpec:
             {"layer": "Payments", "technology": "Stripe", "rationale": "Best API, subscriptions, tax handling"},
         ],
         architecture_notes="Standard 3-tier: Browser → API (FastAPI) → Database. Background jobs via Arq/Redis.",
+        data_model=data_model,
+        api_endpoints=api_endpoints,
         deployment_architecture="Docker Compose on single VPS. API + Worker + Redis + DB. Coolify for management.",
         scalability_notes="Start on single $25 VPS. Scale horizontally when load > 1000 DAU: add worker nodes, read replicas.",
         security_requirements=[
